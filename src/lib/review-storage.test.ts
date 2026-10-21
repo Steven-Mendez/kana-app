@@ -21,6 +21,12 @@ const request: ReviewRequest = {
 function memoryStorage() {
   const data = new Map<string, string>();
   const storage = {
+    multiRemove: jest.fn(async (keys: string[]) => {
+      for (const key of keys) data.delete(key);
+    }),
+    removeItem: jest.fn(async (key: string) => {
+      data.delete(key);
+    }),
     getItem: jest.fn(async (key: string) => data.get(key) ?? null),
     setItem: jest.fn(async (key: string, value: string) => {
       data.set(key, value);
@@ -171,4 +177,71 @@ test('intentional repeated reviews before due time keep distinct FSRS logs and s
       request.cardId,
     ),
   ).toEqual(expected.card);
+});
+
+test('reset removes both alphabets and corrupt progress while preserving unrelated data', async () => {
+  const { store, data } = memoryStorage();
+  await store.commit(request);
+  await store.commit({
+    ...request,
+    cardId: cards.find((card) => card.alphabet === 'katakana')!.id,
+  });
+  data.set(reviewKey(cards[1].id), 'corrupt history');
+  data.set('kana-study-selection', 'keep selection');
+  data.set('kana-preferences', 'keep preferences');
+  await store.reset();
+  expect(data).toEqual(
+    new Map([
+      ['kana-study-selection', 'keep selection'],
+      ['kana-preferences', 'keep preferences'],
+    ]),
+  );
+  expect((await store.load(cards.map((card) => card.id))).size).toBe(0);
+  await store.reset();
+  const fresh = await store.commit({ ...request, id: 'fresh' });
+  expect(fresh.card.reps).toBe(1);
+  expect(fresh.reviews.map((review) => review.id)).toEqual(['fresh']);
+});
+
+test('reset is serialized between prior and later writes', async () => {
+  const { store } = memoryStorage();
+  const prior = store.commit(request);
+  const reset = store.reset();
+  const later = store.commit({ ...request, id: 'after-reset' });
+  await Promise.all([prior, reset]);
+  expect((await later).reviews.map((review) => review.id)).toEqual([
+    'after-reset',
+  ]);
+});
+
+test('a partially failed deletion is completed before loading after restart', async () => {
+  const { store, storage, data } = memoryStorage();
+  await store.commit(request);
+  await store.commit({ ...request, cardId: cards[1].id });
+  storage.multiRemove.mockImplementationOnce(async (keys) => {
+    data.delete(keys[0]);
+    throw new Error('interrupted');
+  });
+  await expect(store.reset()).rejects.toThrow('interrupted');
+  expect(data.has(reviewKey(cards[1].id))).toBe(true);
+  const reopened = createReviewStorage(storage);
+  expect((await reopened.load(cards.map((card) => card.id))).size).toBe(0);
+  expect(data.size).toBe(0);
+});
+
+test('failed intent creation does not delete data; a failed intent cleanup is retried before a new commit', async () => {
+  const { store, storage, data } = memoryStorage();
+  await store.commit(request);
+  storage.setItem.mockRejectedValueOnce(new Error('disk full'));
+  await expect(store.reset()).rejects.toThrow('disk full');
+  expect(storage.multiRemove).not.toHaveBeenCalled();
+  expect((await store.load([request.cardId])).get(request.cardId)?.reps).toBe(
+    1,
+  );
+  storage.removeItem.mockRejectedValueOnce(new Error('interrupted cleanup'));
+  await expect(store.reset()).rejects.toThrow('interrupted cleanup');
+  const reopened = createReviewStorage(storage);
+  const fresh = await reopened.commit({ ...request, id: 'new-epoch' });
+  expect(fresh.reviews.map((review) => review.id)).toEqual(['new-epoch']);
+  expect(data.size).toBe(1);
 });

@@ -574,6 +574,12 @@ test('a repeated character creates a fresh review and stale handlers cannot grad
 test('smart practice accepts future-due kana without inflating FSRS, but saves a subsequent mistake', async () => {
   const data = new Map<string, string>();
   const store = createReviewStorage({
+    multiRemove: async (keys) => {
+      for (const key of keys) data.delete(key);
+    },
+    removeItem: async (key) => {
+      data.delete(key);
+    },
     getItem: async (key) => data.get(key) ?? null,
     setItem: async (key, value) => {
       data.set(key, value);

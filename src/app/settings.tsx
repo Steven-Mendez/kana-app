@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Action } from '@/components/action';
 import { PageHeading } from '@/components/page-heading';
 import { Screen } from '@/components/screen';
+import { ResetProgress } from '@/components/reset-progress';
 import { usePreferences } from '@/lib/preferences-provider';
 import { useSelection } from '@/lib/selection-provider';
 import { defaultSelection } from '@/lib/selection-storage';
@@ -118,6 +119,7 @@ export default function SettingsScreen() {
               </Text>
             ) : null}
           </View>
+          <ResetProgress />
         </View>
       </ScrollView>
     </Screen>

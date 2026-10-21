@@ -146,6 +146,17 @@ const es = {
   deviceData: 'Datos en este dispositivo',
   dataDetail:
     'Tu selección, tema, idioma y progreso de repaso espaciado se guardan aquí. Las puntuaciones de las rondas son temporales. Los datos no se sincronizan con una cuenta.',
+  resetProgress: 'Borrar todo el progreso',
+  resetProgressDetail:
+    'Empieza de cero en Hiragana y Katakana. Se borrarán el historial y los repasos guardados en este dispositivo.',
+  resetProgressConfirm:
+    '¿Borrar todo tu progreso de este dispositivo? No se puede deshacer. Tu selección, idioma y tema se conservarán.',
+  resetProgressAccept: 'Sí, borrar mi progreso',
+  resetProgressCancel: 'Cancelar',
+  resetProgressBusy: 'Borrando progreso…',
+  resetProgressDone: 'Progreso borrado. Ya puedes empezar de cero.',
+  resetProgressError:
+    'No se pudo completar el borrado. Reintenta para terminarlo; también se reanudará al volver a cargar el progreso.',
   reset: 'Restablecer selección',
   resetDetail: 'Vuelve a las cinco vocales de Hiragana.',
   resetDone: 'Selección restablecida a las vocales de Hiragana.',
@@ -293,6 +304,17 @@ const en: typeof es = {
   deviceData: 'Data on this device',
   dataDetail:
     'Your selection, theme, language, and spaced-review progress are saved here. Round scores are temporary. Data is not synced to an account.',
+  resetProgress: 'Delete all progress',
+  resetProgressDetail:
+    'Start over with Hiragana and Katakana. Review history and saved progress on this device will be deleted.',
+  resetProgressConfirm:
+    'Delete all your progress on this device? This cannot be undone. Your selection, language and theme will be kept.',
+  resetProgressAccept: 'Yes, delete my progress',
+  resetProgressCancel: 'Cancel',
+  resetProgressBusy: 'Deleting progress…',
+  resetProgressDone: 'Progress deleted. You can start from zero.',
+  resetProgressError:
+    'Deletion could not be completed. Retry to finish; it will also resume when progress is loaded again.',
   reset: 'Reset selection',
   resetDetail: 'Return to the five Hiragana vowels.',
   resetDone: 'Selection reset to the Hiragana vowels.',

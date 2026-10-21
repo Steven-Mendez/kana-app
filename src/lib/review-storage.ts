@@ -28,7 +28,11 @@ export type ReviewRequest = {
 type Storage = {
   getItem: (key: string) => Promise<string | null>;
   setItem: (key: string, value: string) => Promise<unknown>;
+  multiRemove: (keys: string[]) => Promise<unknown>;
+  removeItem: (key: string) => Promise<unknown>;
 };
+
+const resetIntentKey = 'kana-srs:reset-pending:v1';
 
 const cardIds = new Set(cards.map((card) => card.id));
 
@@ -154,12 +158,24 @@ export function createReviewStorage(storage: Storage) {
     pending = result.catch(() => {});
     return result;
   }
+  async function completeReset() {
+    if ((await storage.getItem(resetIntentKey)) === null) return;
+    await storage.multiRemove(cards.map((card) => reviewKey(card.id)));
+    await storage.removeItem(resetIntentKey);
+  }
   async function read(cardId: string) {
     return parseProgress(await storage.getItem(reviewKey(cardId)), cardId);
   }
   return {
+    reset(): Promise<void> {
+      return serialize(async () => {
+        await storage.setItem(resetIntentKey, '1');
+        await completeReset();
+      });
+    },
     load(cardIds: readonly string[]): Promise<Map<string, Card>> {
       return serialize(async () => {
+        await completeReset();
         const records = await Promise.all([...new Set(cardIds)].map(read));
         const result = new Map<string, Card>();
         for (const saved of records) {
@@ -172,6 +188,7 @@ export function createReviewStorage(storage: Storage) {
       const { id, cardId, rating } = request;
       const now = new Date(request.reviewedAt.getTime());
       return serialize(async () => {
+        await completeReset();
         if (!id.trim()) throw new Error('Missing review identity');
         const saved = await read(cardId);
         const duplicate = saved?.reviews.find((review) => review.id === id);
