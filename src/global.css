@@ -1,7 +1,134 @@
 @import 'tailwindcss';
 @import 'uniwind';
 
-@theme {
-  --color-background: #fdfbf7;
-  --color-foreground: #32191c;
+/* App palette: raw values stay separate from their UI roles. */
+@layer theme {
+  :root {
+    --palette-light-accent: oklch(94.5% 0.025 45);
+    --palette-light-accent-foreground: oklch(37.5% 0.1 30);
+    --palette-light-background: oklch(98.8% 0.006 84.6);
+    --palette-light-border: oklch(90.6% 0.014 70);
+    --palette-light-card: oklch(100% 0.003 84.6);
+    --palette-light-card-foreground: oklch(25% 0.04 14);
+    --palette-light-chart-1: oklch(90.5% 0.045 45);
+    --palette-light-chart-2: oklch(81.5% 0.09 38);
+    --palette-light-chart-3: oklch(71% 0.135 33);
+    --palette-light-chart-4: oklch(57.5% 0.19 30);
+    --palette-light-chart-5: oklch(44% 0.15 28);
+    --palette-light-destructive: oklch(57.7% 0.245 27.325);
+    --palette-light-muted: oklch(96.2% 0.011 70);
+    --palette-light-muted-foreground: oklch(54.5% 0.028 30);
+    --palette-light-primary-foreground: oklch(98.5% 0.012 84.6);
+    --palette-light-secondary-foreground: oklch(30.5% 0.045 20);
+    --palette-light-sidebar: oklch(97.2% 0.01 78);
+    --palette-dark-accent: oklch(33% 0.045 25);
+    --palette-dark-accent-foreground: oklch(95.5% 0.013 84.6);
+    --palette-dark-background: oklch(17.8% 0.017 12);
+    --palette-dark-border: oklch(100% 0 0/0.12);
+    --palette-dark-card: oklch(22.8% 0.021 12);
+    --palette-dark-chart-1: oklch(33.5% 0.055 27);
+    --palette-dark-chart-2: oklch(44% 0.105 29);
+    --palette-dark-chart-3: oklch(55% 0.15 30);
+    --palette-dark-chart-4: oklch(67.2% 0.18 31);
+    --palette-dark-chart-5: oklch(79% 0.125 38);
+    --palette-dark-destructive: oklch(70.4% 0.191 22.216);
+    --palette-dark-input: oklch(100% 0 0/0.16);
+    --palette-dark-muted: oklch(28.8% 0.022 14);
+    --palette-dark-muted-foreground: oklch(71.8% 0.021 55);
+    --palette-dark-primary-foreground: oklch(18.5% 0.02 14);
+    --palette-dark-ring: oklch(61% 0.16 31);
+    --palette-amber-400: oklch(82.8% 0.189 84.429);
+    --palette-amber-500: oklch(76.9% 0.188 70.08);
+    --palette-amber-600: oklch(66.6% 0.179 58.318);
+    --palette-black: #000;
+    --palette-emerald-400: oklch(76.5% 0.177 163.223);
+    --palette-emerald-500: oklch(69.6% 0.17 162.48);
+    --palette-emerald-600: oklch(59.6% 0.145 163.225);
+    --palette-orange-400: oklch(75% 0.183 55.934);
+    --palette-orange-500: oklch(70.5% 0.213 47.604);
+    --palette-orange-600: oklch(64.6% 0.222 41.116);
+    --palette-white: #fff;
+
+    @variant light {
+      --color-accent: var(--palette-light-accent);
+      --color-accent-foreground: var(--palette-light-accent-foreground);
+      --color-background: var(--palette-light-background);
+      --color-border: var(--palette-light-border);
+      --color-card: var(--palette-light-card);
+      --color-card-foreground: var(--palette-light-card-foreground);
+      --color-chart-1: var(--palette-light-chart-1);
+      --color-chart-2: var(--palette-light-chart-2);
+      --color-chart-3: var(--palette-light-chart-3);
+      --color-chart-4: var(--palette-light-chart-4);
+      --color-chart-5: var(--palette-light-chart-5);
+      --color-destructive: var(--palette-light-destructive);
+      --color-foreground: var(--palette-light-card-foreground);
+      --color-input: var(--palette-light-border);
+      --color-muted: var(--palette-light-muted);
+      --color-muted-foreground: var(--palette-light-muted-foreground);
+      --color-popover: var(--palette-light-card);
+      --color-popover-foreground: var(--palette-light-card-foreground);
+      --color-primary: var(--palette-light-chart-4);
+      --color-primary-foreground: var(--palette-light-primary-foreground);
+      --color-ring: var(--palette-light-chart-4);
+      --color-secondary: var(--palette-light-muted);
+      --color-secondary-foreground: var(--palette-light-secondary-foreground);
+      --color-sidebar: var(--palette-light-sidebar);
+      --color-sidebar-accent: var(--palette-light-accent);
+      --color-sidebar-accent-foreground: var(--palette-light-accent-foreground);
+      --color-sidebar-border: var(--palette-light-border);
+      --color-sidebar-foreground: var(--palette-light-card-foreground);
+      --color-sidebar-primary: var(--palette-light-chart-4);
+      --color-sidebar-primary-foreground: var(
+        --palette-light-primary-foreground
+      );
+      --color-sidebar-ring: var(--palette-light-chart-4);
+      --color-surface: var(--palette-light-card);
+      --color-success: var(--palette-emerald-600);
+      --color-success-fill: var(--palette-emerald-500);
+      --color-error: var(--palette-light-destructive);
+      --color-warning: var(--palette-amber-600);
+    }
+
+    @variant dark {
+      --color-accent: var(--palette-dark-accent);
+      --color-accent-foreground: var(--palette-dark-accent-foreground);
+      --color-background: var(--palette-dark-background);
+      --color-border: var(--palette-dark-border);
+      --color-card: var(--palette-dark-card);
+      --color-card-foreground: var(--palette-dark-accent-foreground);
+      --color-chart-1: var(--palette-dark-chart-1);
+      --color-chart-2: var(--palette-dark-chart-2);
+      --color-chart-3: var(--palette-dark-chart-3);
+      --color-chart-4: var(--palette-dark-chart-4);
+      --color-chart-5: var(--palette-dark-chart-5);
+      --color-destructive: var(--palette-dark-destructive);
+      --color-foreground: var(--palette-dark-accent-foreground);
+      --color-input: var(--palette-dark-input);
+      --color-muted: var(--palette-dark-muted);
+      --color-muted-foreground: var(--palette-dark-muted-foreground);
+      --color-popover: var(--palette-dark-card);
+      --color-popover-foreground: var(--palette-dark-accent-foreground);
+      --color-primary: var(--palette-dark-chart-4);
+      --color-primary-foreground: var(--palette-dark-primary-foreground);
+      --color-ring: var(--palette-dark-ring);
+      --color-secondary: var(--palette-dark-muted);
+      --color-secondary-foreground: var(--palette-dark-accent-foreground);
+      --color-sidebar: var(--palette-dark-card);
+      --color-sidebar-accent: var(--palette-dark-accent);
+      --color-sidebar-accent-foreground: var(--palette-dark-accent-foreground);
+      --color-sidebar-border: var(--palette-dark-border);
+      --color-sidebar-foreground: var(--palette-dark-accent-foreground);
+      --color-sidebar-primary: var(--palette-dark-chart-4);
+      --color-sidebar-primary-foreground: var(
+        --palette-dark-primary-foreground
+      );
+      --color-sidebar-ring: var(--palette-dark-ring);
+      --color-surface: var(--palette-dark-card);
+      --color-success: var(--palette-emerald-400);
+      --color-success-fill: var(--palette-emerald-500);
+      --color-error: var(--palette-dark-destructive);
+      --color-warning: var(--palette-amber-400);
+    }
+  }
 }
