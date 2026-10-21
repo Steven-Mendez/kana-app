@@ -1,43 +1,29 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# Project guidelines
 
-## Expo has changed — do not trust your training data
+Expo / React Native app. Prioritize mobile-first design, performance, and cross-platform compatibility.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+## Development
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+- Before using Expo, EAS, or React Native APIs, read the Expo version in `package.json` and fetch `https://docs.expo.dev/versions/v<major>.0.0/`. Find other current docs through `https://docs.expo.dev/llms.txt`; do not rely on memory.
+- Use the pnpm version pinned in `package.json`. Install dependencies with `pnpm exec expo install <package>` and include `pnpm-lock.yaml` changes.
+- Reuse existing tools. Prefer popular, maintained, compatible tools and recommended Expo modules. Check relevant skills before adding dependencies; avoid duplicate tooling.
+- Use Expo Router for navigation. Keep routes in `src/app/`, navigators in `_layout.tsx`, and non-route code outside `src/app/`. Import navigation APIs from `expo-router`.
+- Configure generated `ios/` and `android/` projects through `app.json` and config plugins, not manual edits. Native modules outside Expo Go require a development build.
+- Use `pnpm dlx eas-cli@latest <command>` for cloud builds, signing, submissions, and OTA updates.
 
 ## Commands
 
-This project uses pnpm. Use the version pinned in `package.json` and commit `pnpm-lock.yaml` when dependencies change.
-
 ```bash
-pnpm install --frozen-lockfile   # install locked dependencies
-pnpm exec expo install <package> # ALWAYS use instead of pnpm add — resolves SDK-compatible versions
-pnpm start                      # start the dev server
-pnpm lint                       # lint
-pnpm exec tsc --noEmit           # typecheck
-pnpm dlx expo-doctor             # diagnose dependency and config issues
-pnpm exec expo install --fix     # fix incompatible package versions
-pnpm build:web                  # export the website to dist/
+pnpm install --frozen-lockfile # install dependencies
+pnpm start                    # development server
+pnpm check                    # ESLint + TypeScript + formatting + React Doctor
+pnpm lint:fix                 # fix lint issues
+pnpm format                   # format files
+pnpm dlx expo-doctor           # SDK and dependency compatibility
+pnpm build:web                # export to dist/
 ```
 
-Run lint and typecheck before declaring any task done.
+## Quality
 
-## Navigation & Routing
-
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
-
-## Building with EAS
-
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `pnpm dlx eas-cli@latest <command>`; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
-
-## Rules
-
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+- Run `pnpm check` before finishing a task.
+- Git hooks: pre-commit fixes staged files with ESLint and Prettier; pre-push runs `pnpm check`.

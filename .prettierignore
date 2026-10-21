@@ -1,0 +1,5 @@
+.agents/
+.opencode/
+.husky/_/
+pnpm-lock.yaml
+skills-lock.json
