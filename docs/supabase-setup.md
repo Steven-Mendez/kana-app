@@ -97,13 +97,13 @@ Para habilitar Apple o correo más adelante, completar primero su configuración
 
 ## Rutas web en Vercel
 
-El export estático genera un HTML por ruta. `vercel.json` activa `cleanUrls` para servir, por ejemplo, `profile.html` como `/profile`, incluso al refrescar, y `auth/callback.html` como `/auth/callback`. El cambio requiere un nuevo despliegue. Tras publicarlo, comprobar apertura directa y recarga de `/practice`, `/profile`, `/settings` y `/auth/callback`; comprobar también que una URL desconocida sigue devolviendo 404. No se ha realizado ese despliegue desde esta tarea.
+El export estático genera un HTML por ruta. `vercel.json` activa `cleanUrls` para servir, por ejemplo, `profile.html` como `/profile`, incluso al refrescar, y `auth/callback.html` como `/auth/callback`. El cambio requiere un nuevo despliegue. Tras publicarlo, comprobar apertura directa y recarga de `/practice`, `/profile`, `/settings` y `/auth/callback`; comprobar también que una URL desconocida sigue devolviendo 404. Desplegado y verificado en producción: las rutas conocidas devuelven 200 y una ruta desconocida devuelve 404.
 
 ## Despliegue remoto del 21 de octubre de 2026
 
 Se verificó que el proyecto coincide con la URL pública configurada en la app y que `public` no contenía tablas antes de aplicar los cambios. Se aplicaron `20261021214340_learning_accounts` y `20261021222534_learning_reset`; el historial remoto coincide con el local. Se desplegó `sync-learning` mediante la CLI. Su configuración Deno se mantiene en `supabase/functions/sync-learning/deno.json`, donde el empaquetador remoto detecta las dependencias fijadas.
 
-Comprobaciones remotas: RLS habilitada en las nueve tablas; escrituras directas de tablas denegadas a `anon` y `authenticated` (el perfil conserva la actualización autorizada de columnas); las cinco RPC de aprendizaje solo son ejecutables por `service_role`. El endpoint responde 200 al preflight y 401 a peticiones sin sesión o con token inválido. No se ha ejecutado todavía el flujo completo de correo y estudio con una cuenta real en producción.
+Comprobaciones remotas: RLS habilitada en las nueve tablas; escrituras directas de tablas denegadas a `anon` y `authenticated` (el perfil conserva la actualización autorizada de columnas); las cinco RPC de aprendizaje solo son ejecutables por `service_role`. El endpoint responde 200 al preflight y 401 a peticiones sin sesión o con token inválido. El acceso real con Google, el retorno PKCE y el perfil sincronizado se verificaron en producción; no se añadieron repasos ficticios a la cuenta del propietario.
 
 El asesor remoto no encontró errores, pero señaló dos advertencias de permisos en la función preexistente `public.rls_auto_enable()`, que devuelve `event_trigger`. Esa función ya existía antes de las migraciones y no fue modificada.
 
@@ -117,6 +117,12 @@ Se creó Google Cloud `quick-kana` (756408788884), conservando `interview-agent-
 
 El cliente web `quick-kana Supabase` usa los orígenes `https://kana-app-eight.vercel.app` y `http://localhost:8081`. Su único retorno de Google es `https://uwxzwlskjihibbuuicnw.supabase.co/auth/v1/callback`. El secreto está guardado únicamente en Supabase. Los únicos scopes declarados son `openid`, `userinfo.email` y `userinfo.profile`. No se configuraron permisos de Gmail, Drive ni Cloud.
 
-Las páginas públicas `/privacy` y `/terms` explican el servicio en español e inglés y se enlazan desde inicio y acceso. Se exportan con contenido HTML sin depender de la sesión ni del almacenamiento local. Google tiene registradas ambas URLs y la página principal. El correo de soporte y solicitudes de cuenta es el contacto configurado por el propietario en Google Cloud.
+Las páginas públicas `/privacy` y `/terms` explican el servicio en español e inglés y se enlazan desde inicio y acceso. Se exportan con contenido HTML sin depender de la sesión ni del almacenamiento local. Google tiene registradas ambas URLs y la página principal, con el estado de publicación «En producción». El correo de soporte y solicitudes de cuenta es el contacto configurado por el propietario en Google Cloud.
 
 Para rotar la credencial de Google: generar el nuevo secreto en el cliente de Google Cloud, actualizar Google en Supabase, verificar un acceso completo y después revocar la credencial anterior. Nunca colocar el secreto en variables `EXPO_PUBLIC_*`, Vercel ni Git.
+
+## Verificación web de producción
+
+Commit de aplicación `0ff5e03`, desplegado por Vercel en `https://kana-app-eight.vercel.app`. Acceso Google completado con la cuenta del propietario; callback PKCE vuelve a `/profile` y muestra «Sincronizado». La recarga de Perfil conserva la sesión. HTTP 200 para inicio, práctica, perfil, ajustes, callback, privacidad y condiciones; HTTP 404 para una ruta desconocida. El HTML de privacidad y condiciones contiene los textos completos antes de ejecutar JavaScript.
+
+Comprobaciones finales: 101 pruebas en 17 suites; `pnpm check`; Expo Doctor 20/20; export web de 17 rutas; OpenSpec estricto. Las verificaciones de dispositivos nativos y la matriz manual de dos dispositivos permanecen pendientes, explícitas en los tres cambios de implementación. Se publica la web; no se han enviado builds a App Store ni Google Play.
