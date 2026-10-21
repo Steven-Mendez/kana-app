@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
+import { LegalLinks } from '@/components/legal-links';
 import { Action } from '@/components/action';
 import {
   AlphabetCoverage,
@@ -14,7 +15,7 @@ import { selectedCards } from '@/lib/study';
 import { useStudyProgress } from '@/lib/use-study-progress';
 
 export default function HomeScreen() {
-  const { t } = usePreferences();
+  const { t, preferences } = usePreferences();
   const { selection, notice } = useSelection();
   const progress = useStudyProgress();
   const selected = selection ? selectedCards(selection.kanaIds) : [];
@@ -118,6 +119,7 @@ export default function HomeScreen() {
             )}
           </View>
           {progress.data ? <DueReview data={progress.data} /> : null}
+          <LegalLinks language={preferences.language} />
         </View>
       </ScrollView>
     </Screen>

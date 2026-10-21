@@ -1,5 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { learning } from '@/lib/learning';
 
-import { createReviewStorage } from '@/lib/review-storage';
-
-export const reviews = createReviewStorage(AsyncStorage);
+// Stable guest facade, also useful to consumers outside the account UI.
+export const reviews = learning.reviews('guest');

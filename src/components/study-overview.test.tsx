@@ -5,12 +5,32 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import HomeScreen from '@/app/(tabs)/index';
 import SyllabaryScreen from '@/app/(tabs)/syllabary';
+import { LearningProvider } from '@/lib/learning-provider';
+import { learning } from '@/lib/learning';
+import { resetTestStore } from '@/lib/test-document-store';
 import { SelectionProvider } from '@/lib/selection-provider';
 import { reviews } from '@/lib/reviews';
 import { selectedCards } from '@/lib/study';
 import { copy } from '@/lib/copy';
 
+jest.mock('@/lib/auth-provider', () => ({
+  useAuth: () => ({ session: null }),
+}));
+jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+jest.mock('@/lib/learning-db', () => ({
+  learningDb: jest.requireActual<typeof import('@/lib/test-document-store')>(
+    '@/lib/test-document-store',
+  ).testStore,
+}));
+
+jest.mock('expo-crypto', () => ({
+  randomUUID: () =>
+    jest
+      .requireActual<typeof import('node:crypto')>('node:crypto')
+      .randomUUID(),
+}));
 jest.mock('expo-router', () => ({
+  Link: jest.requireActual<typeof import('react-native')>('react-native').Text,
   router: { navigate: jest.fn() },
   useFocusEffect: (callback: () => void) =>
     jest
@@ -35,6 +55,7 @@ jest.mock('@/lib/preferences-provider', () => ({
 
 beforeEach(async () => {
   await AsyncStorage.clear();
+  resetTestStore();
   jest.restoreAllMocks();
   jest.clearAllMocks();
 });
@@ -44,9 +65,11 @@ test('home distinguishes unavailable progress from first use, retries and resume
     .spyOn(reviews, 'load')
     .mockRejectedValueOnce(new Error('Storage unavailable'));
   await render(
-    <SelectionProvider>
-      <HomeScreen />
-    </SelectionProvider>,
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
   );
   expect(screen.queryByText(copy.en.tagline)).not.toBeOnTheScreen();
   expect(await screen.findByText(copy.en.reviewLoadError)).toBeOnTheScreen();
@@ -67,9 +90,11 @@ test('home distinguishes unavailable progress from first use, retries and resume
 
 test('syllabary browsing leaves saved families intact until the explicit family action', async () => {
   await render(
-    <SelectionProvider>
-      <SyllabaryScreen />
-    </SelectionProvider>,
+    <LearningProvider>
+      <SelectionProvider>
+        <SyllabaryScreen />
+      </SelectionProvider>
+    </LearningProvider>,
   );
   await act(async () => {});
   await fireEvent.press(screen.getByRole('tab', { name: 'Katakana' }));
@@ -81,13 +106,10 @@ test('syllabary browsing leaves saved families intact until the explicit family 
     pathname: '/practice',
     params: { section: 'basic' },
   });
-  expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(
-    'kana-study-selection',
-    JSON.stringify({
-      alphabet: 'katakana',
-      kanaIds: selectedCards(['katakana:sa']).map((card) => card.id),
-    }),
-  );
+  expect((await learning.read('guest')).selection).toEqual({
+    alphabet: 'katakana',
+    kanaIds: selectedCards(['katakana:sa']).map((card) => card.id),
+  });
 });
 
 test('Home resumes a partial character selection without broadening its family', async () => {
@@ -96,9 +118,11 @@ test('Home resumes a partial character selection without broadening its family',
     JSON.stringify({ alphabet: 'hiragana', kanaIds: ['hiragana:い'] }),
   );
   await render(
-    <SelectionProvider>
-      <HomeScreen />
-    </SelectionProvider>,
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
   );
   await screen.findByText(copy.en.selected(1));
   await fireEvent.press(screen.getByTestId('home-start'));

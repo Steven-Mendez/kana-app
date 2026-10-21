@@ -6,7 +6,7 @@ const prettierConfig = require('eslint-config-prettier/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*', '.agents/**', '.opencode/**'],
+    ignores: ['dist/*', '.agents/**', '.opencode/**', 'supabase/functions/**'],
   },
   prettierConfig,
 ]);

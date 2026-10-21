@@ -3,10 +3,13 @@ import { Text, View } from 'react-native';
 
 import { Action } from '@/components/action';
 import { usePreferences } from '@/lib/preferences-provider';
-import { reviews } from '@/lib/reviews';
+import { useLearning } from '@/lib/learning-provider';
+import { useAuth } from '@/lib/auth-provider';
 
 export function ResetProgress() {
   const { t } = usePreferences();
+  const { resetProgress } = useLearning();
+  const { account } = useAuth();
   const [status, setStatus] = useState<
     'idle' | 'confirm' | 'pending' | 'done' | 'error'
   >('idle');
@@ -16,7 +19,7 @@ export function ResetProgress() {
     deleting.current = true;
     setStatus('pending');
     try {
-      await reviews.reset();
+      await resetProgress();
       setStatus('done');
     } catch {
       setStatus('error');
@@ -33,7 +36,7 @@ export function ResetProgress() {
         {t.resetProgress}
       </Text>
       <Text className="text-sm leading-6 text-muted-foreground">
-        {t.resetProgressDetail}
+        {account ? t.resetAccountProgressDetail : t.resetProgressDetail}
       </Text>
       {status === 'confirm' ? (
         <>
@@ -41,7 +44,7 @@ export function ResetProgress() {
             accessibilityLiveRegion="polite"
             className="text-base leading-6 text-foreground"
           >
-            {t.resetProgressConfirm}
+            {account ? t.resetAccountProgressConfirm : t.resetProgressConfirm}
           </Text>
           <View className="flex-row flex-wrap gap-2">
             <Action

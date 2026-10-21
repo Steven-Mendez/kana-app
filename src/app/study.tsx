@@ -5,8 +5,10 @@ import { StudySession } from '@/components/study-session';
 import { ScheduledStudy } from '@/components/scheduled-study';
 import { filterDueSnapshot } from '@/lib/study-progress';
 import { parseStudySetup } from '@/lib/study';
+import { useLearning } from '@/lib/learning-provider';
 
 export default function StudyScreen() {
+  const { document } = useLearning();
   const { kana, families, mode, due } = useLocalSearchParams<{
     kana?: string | string[];
     families?: string | string[];
@@ -26,7 +28,7 @@ export default function StudyScreen() {
     return (
       <ScheduledStudy
         dueOnly={due !== undefined}
-        key={`scheduled:${cards.map((card) => card.id).join(',')}`}
+        key={`scheduled:${document.generation}:${cards.map((card) => card.id).join(',')}`}
         cards={cards}
       />
     );

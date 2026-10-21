@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.stevenmendez.kanaapp",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.stevenmendez.kanaapp",
@@ -46,7 +47,10 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-web-browser",
+      "expo-sqlite",
+      "expo-apple-authentication"
     ]
   }
 }

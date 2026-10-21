@@ -17,6 +17,12 @@ import { createReviewStorage, type ReviewRequest } from '@/lib/review-storage';
 import { reviews } from '@/lib/reviews';
 import { initializeCard, scheduleReview } from '@/lib/spaced-repetition';
 
+jest.mock('expo-crypto', () => ({
+  randomUUID: () =>
+    jest
+      .requireActual<typeof import('node:crypto')>('node:crypto')
+      .randomUUID(),
+}));
 jest.mock('expo-router', () => ({ router: { dismissTo: jest.fn() } }));
 jest.mock('@/components/icon', () => ({ Icon: () => null }));
 jest.mock('uniwind', () => ({ useCSSVariable: () => '#806a67' }));
@@ -28,6 +34,12 @@ jest.mock('@/lib/preferences-provider', () => ({
     t: jest.requireActual<typeof import('@/lib/copy')>('@/lib/copy').copy.en,
     preferences: { language: 'en', theme: 'light' },
     notice: '',
+  }),
+}));
+jest.mock('@/lib/learning-provider', () => ({
+  useLearning: () => ({
+    reviews:
+      jest.requireMock<typeof import('@/lib/reviews')>('@/lib/reviews').reviews,
   }),
 }));
 jest.mock('@/lib/reviews', () => ({

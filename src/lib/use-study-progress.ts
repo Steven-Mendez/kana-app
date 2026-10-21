@@ -1,9 +1,9 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { cards } from '@/data/kana';
-import { reviews } from '@/lib/reviews';
+import { useLearning } from '@/lib/learning-provider';
 import { summarizeProgress } from '@/lib/study-progress';
 
 type Progress = ReturnType<typeof summarizeProgress>;
@@ -12,6 +12,7 @@ type Snapshot =
   | { status: 'ready'; data: Progress };
 
 export function useStudyProgress() {
+  const { reviews, document } = useLearning();
   const [snapshot, setSnapshot] = useState<Snapshot>({
     status: 'loading',
     data: null,
@@ -32,7 +33,7 @@ export function useStudyProgress() {
       if (active.current && current === generation.current)
         setSnapshot({ status: 'error', data: null });
     }
-  }, []);
+  }, [reviews]);
   useFocusEffect(
     useCallback(() => {
       active.current = true;
@@ -51,6 +52,13 @@ export function useStudyProgress() {
       };
     }, [load]),
   );
+  const previousDocument = useRef(document);
+  useEffect(() => {
+    if (previousDocument.current !== document) {
+      previousDocument.current = document;
+      if (active.current) void load();
+    }
+  }, [document, load]);
   return {
     ...snapshot,
     refresh: () => {

@@ -1,3 +1,4 @@
+import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCSSVariable } from 'uniwind';
@@ -214,7 +215,7 @@ export function StudySession({
       if (!onCommitReview) return;
       const reviewedAt = new Date();
       pendingReview.current = {
-        id: `${card.id}:${reviewedAt.toISOString()}`,
+        id: randomUUID(),
         cardId: card.id,
         rating: ratingForAnswer(result.correct),
         reviewedAt,

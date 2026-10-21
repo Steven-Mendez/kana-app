@@ -4,3 +4,5 @@
 pnpm-lock.yaml
 skills-lock.json
 src/uniwind-types.d.ts
+supabase/.temp/
+supabase/.branches/

@@ -9,7 +9,7 @@ import { Screen } from '@/components/screen';
 import { StudySession } from '@/components/study-session';
 import type { KanaCard } from '@/data/kana';
 import { usePreferences } from '@/lib/preferences-provider';
-import { reviews } from '@/lib/reviews';
+import { useLearning } from '@/lib/learning-provider';
 import { reviewQueue, shouldSchedulePractice } from '@/lib/spaced-repetition';
 
 export function ScheduledStudy({
@@ -20,21 +20,25 @@ export function ScheduledStudy({
   dueOnly?: boolean;
 }) {
   const { t, preferences } = usePreferences();
+  const { reviews } = useLearning();
   const progressRef = useRef(new Map<string, Card>());
-  const commit = useCallback(async (request: ReviewRequest) => {
-    if (
-      !shouldSchedulePractice(
-        progressRef.current.get(request.cardId),
-        request.rating,
-        request.reviewedAt,
-      )
-    ) {
-      return { practiceOnly: true as const };
-    }
-    const saved = await reviews.commit(request);
-    progressRef.current.set(request.cardId, hydrateCard(saved.card));
-    return saved;
-  }, []);
+  const commit = useCallback(
+    async (request: ReviewRequest) => {
+      if (
+        !shouldSchedulePractice(
+          progressRef.current.get(request.cardId),
+          request.rating,
+          request.reviewedAt,
+        )
+      ) {
+        return { practiceOnly: true as const };
+      }
+      const saved = await reviews.commit(request);
+      progressRef.current.set(request.cardId, hydrateCard(saved.card));
+      return saved;
+    },
+    [reviews],
+  );
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<
     | { status: 'loading' | 'error' }
@@ -74,7 +78,7 @@ export function ScheduledStudy({
     return () => {
       active = false;
     };
-  }, [cards, attempt, dueOnly]);
+  }, [cards, attempt, dueOnly, reviews]);
 
   if (state.status === 'ready' && state.cards.length)
     return (

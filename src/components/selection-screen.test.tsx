@@ -10,10 +10,28 @@ import { router } from 'expo-router';
 import { Dimensions } from 'react-native';
 
 import HomeScreen from '@/app/(tabs)/practice';
+import { LearningProvider } from '@/lib/learning-provider';
+import { resetTestStore } from '@/lib/test-document-store';
 import { SelectionProvider } from '@/lib/selection-provider';
 import { selectedCards } from '@/lib/study';
 import { copy } from '@/lib/copy';
 
+jest.mock('@/lib/auth-provider', () => ({
+  useAuth: () => ({ session: null }),
+}));
+jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+jest.mock('@/lib/learning-db', () => ({
+  learningDb: jest.requireActual<typeof import('@/lib/test-document-store')>(
+    '@/lib/test-document-store',
+  ).testStore,
+}));
+
+jest.mock('expo-crypto', () => ({
+  randomUUID: () =>
+    jest
+      .requireActual<typeof import('node:crypto')>('node:crypto')
+      .randomUUID(),
+}));
 jest.mock('expo-router', () => {
   const route = {
     navigate: jest.fn(),
@@ -46,6 +64,7 @@ jest.mock('@/lib/preferences-provider', () => ({
 
 beforeEach(async () => {
   await AsyncStorage.clear();
+  resetTestStore();
   jest.clearAllMocks();
 });
 
@@ -55,9 +74,11 @@ test('category and alphabet changes preserve selection; bulk actions remain alph
     window: { width: 390, height: 844, scale: 1, fontScale: 1 },
   });
   await render(
-    <SelectionProvider>
-      <HomeScreen />
-    </SelectionProvider>,
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
   );
   expect(await screen.findByLabelText(t.selected(5))).toBeOnTheScreen();
   expect(screen.getByRole('tab', { name: 'Hiragana · 5' })).toBeSelected();
@@ -136,9 +157,11 @@ test('category and alphabet changes preserve selection; bulk actions remain alph
 
 test('a single character starts an exact deck and survives remount', async () => {
   const view = await render(
-    <SelectionProvider>
-      <HomeScreen />
-    </SelectionProvider>,
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
   );
   await screen.findByTestId('start-study');
   await fireEvent.press(screen.getByTestId('clear-selection'));
@@ -150,9 +173,11 @@ test('a single character starts an exact deck and survives remount', async () =>
   });
   await view.unmount();
   await render(
-    <SelectionProvider>
-      <HomeScreen />
-    </SelectionProvider>,
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
   );
   expect(await screen.findByLabelText(copy.en.selected(1))).toBeOnTheScreen();
   expect(screen.getByTestId('kana-hiragana:い')).toBeChecked();

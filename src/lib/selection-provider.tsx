@@ -1,19 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  createContext,
-  use,
-  useEffect,
-  useState,
-  type PropsWithChildren,
-} from 'react';
+import { createContext, use, useState, type PropsWithChildren } from 'react';
 
-import {
-  createSelectionStorage,
-  type Selection,
-} from '@/lib/selection-storage';
+import { cards } from '@/data/kana';
+import { useLearning } from '@/lib/learning-provider';
 import { usePreferences } from '@/lib/preferences-provider';
+import type { Selection } from '@/lib/selection-storage';
 
-const storage = createSelectionStorage(AsyncStorage);
 const SelectionContext = createContext<{
   selection: Selection | null;
   notice: string;
@@ -22,55 +13,33 @@ const SelectionContext = createContext<{
 
 export function SelectionProvider({ children }: PropsWithChildren) {
   const { t } = usePreferences();
-  const [state, setState] = useState<{
-    selection: Selection | null;
-    edited: boolean;
-  }>({ selection: null, edited: false });
-  const [notice, setNotice] = useState<
-    '' | 'selectionLoadError' | 'selectionSaveError'
-  >('');
-
-  useEffect(() => {
-    let active = true;
-    void storage.load().then((result) => {
-      if (!active) return;
-      setState({ selection: result.selection, edited: false });
-      setNotice(result.notice);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!state.selection || !state.edited) return;
-    let active = true;
-    void storage.save(state.selection).then(
-      () => {
-        if (active) setNotice('');
-      },
-      () => {
-        if (active) setNotice('selectionSaveError');
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [state]);
-
+  const { document, settings } = useLearning();
+  const [failed, setFailed] = useState(false);
+  const selection = document.selection;
   function updateSelection(update: (selection: Selection) => Selection) {
-    setState((current) =>
-      current.selection
-        ? { selection: update(current.selection), edited: true }
-        : current,
+    const next = update(selection);
+    const previous = new Set(selection.kanaIds);
+    const wanted = new Set(next.kanaIds);
+    const changed = Object.fromEntries(
+      cards
+        .filter((card) => previous.has(card.id) !== wanted.has(card.id))
+        .map((card) => [card.id, wanted.has(card.id)]),
+    );
+    void settings({
+      ...(next.alphabet !== selection.alphabet
+        ? { alphabet: next.alphabet }
+        : {}),
+      selection: changed,
+    }).then(
+      () => setFailed(false),
+      () => setFailed(true),
     );
   }
-
   return (
     <SelectionContext
       value={{
-        selection: state.selection,
-        notice: notice ? t[notice] : '',
+        selection,
+        notice: failed ? t.selectionSaveError : '',
         updateSelection,
       }}
     >
@@ -78,7 +47,6 @@ export function SelectionProvider({ children }: PropsWithChildren) {
     </SelectionContext>
   );
 }
-
 export function useSelection() {
   const context = use(SelectionContext);
   if (!context) throw new Error('SelectionProvider is required');

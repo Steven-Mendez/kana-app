@@ -40,7 +40,7 @@ const es = {
   coverageDetail:
     'Estudiados indica los kana que has repasado al menos una vez. No es una medida de dominio.',
   progressLocalDetail:
-    'Solo cuenta el repaso espaciado guardado en este dispositivo. La práctica libre no modifica estos datos.',
+    'Cuenta el repaso espaciado de tu espacio de estudio actual, incluido el progreso sincronizado. La práctica libre no modifica estos datos.',
 
   practice: 'Practicar',
   profile: 'Perfil',
@@ -145,7 +145,11 @@ const es = {
   languageDetail: 'El rōmaji y los kana no cambian.',
   deviceData: 'Datos en este dispositivo',
   dataDetail:
-    'Tu selección, tema, idioma y progreso de repaso espaciado se guardan aquí. Las puntuaciones de las rondas son temporales. Los datos no se sincronizan con una cuenta.',
+    'Tu selección, ajustes y repasos se guardan en este dispositivo. Inicia sesión con Google para sincronizarlos. Las puntuaciones de las rondas son temporales.',
+  resetAccountProgressDetail:
+    'Borra los repasos de esta cuenta en todos tus dispositivos. Requiere conexión; conserva tu selección y ajustes.',
+  resetAccountProgressConfirm:
+    'Se borrarán de Supabase todos los repasos de esta cuenta. Los dispositivos sin conexión descartarán sus repasos anteriores al volver a sincronizar. ¿Borrar el progreso de la cuenta?',
   resetProgress: 'Borrar todo el progreso',
   resetProgressDetail:
     'Empieza de cero en Hiragana y Katakana. Se borrarán el historial y los repasos guardados en este dispositivo.',
@@ -203,7 +207,7 @@ const en: typeof es = {
   coverageDetail:
     'Studied counts kana reviewed at least once. It is not a measure of mastery.',
   progressLocalDetail:
-    'Only spaced reviews saved on this device count here. Free practice does not change these figures.',
+    'Spaced reviews in your current workspace count here, including synced progress. Free practice does not change these figures.',
 
   practice: 'Practice',
   profile: 'Profile',
@@ -303,7 +307,11 @@ const en: typeof es = {
   languageDetail: 'Rōmaji and kana stay the same.',
   deviceData: 'Data on this device',
   dataDetail:
-    'Your selection, theme, language, and spaced-review progress are saved here. Round scores are temporary. Data is not synced to an account.',
+    'Your selection, preferences, and reviews are saved on this device. Sign in with Google to sync them. Round scores are temporary.',
+  resetAccountProgressDetail:
+    'Delete this account’s reviews on all your devices. Requires a connection; keeps your selection and preferences.',
+  resetAccountProgressConfirm:
+    'All reviews for this account will be deleted from Supabase. Offline devices will discard their older reviews when they synchronize again. Delete account progress?',
   resetProgress: 'Delete all progress',
   resetProgressDetail:
     'Start over with Hiragana and Katakana. Review history and saved progress on this device will be deleted.',
