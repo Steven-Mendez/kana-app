@@ -10,15 +10,17 @@ Expo ships breaking changes every SDK release. APIs you remember are likely rena
 
 ## Commands
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+This project uses pnpm. Use the version pinned in `package.json` and commit `pnpm-lock.yaml` when dependencies change.
 
 ```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
+pnpm install --frozen-lockfile   # install locked dependencies
+pnpm exec expo install <package> # ALWAYS use instead of pnpm add — resolves SDK-compatible versions
+pnpm start                      # start the dev server
+pnpm lint                       # lint
+pnpm exec tsc --noEmit           # typecheck
+pnpm dlx expo-doctor             # diagnose dependency and config issues
+pnpm exec expo install --fix     # fix incompatible package versions
+pnpm build:web                  # export the website to dist/
 ```
 
 Run lint and typecheck before declaring any task done.
@@ -31,7 +33,7 @@ Run lint and typecheck before declaring any task done.
 
 ## Building with EAS
 
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
+Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `pnpm dlx eas-cli@latest <command>`; substitute that for bare `eas` in docs examples.
 Docs: https://docs.expo.dev/eas/index.md
 
 ## Rules
