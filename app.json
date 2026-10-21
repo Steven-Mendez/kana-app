@@ -7,9 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "com.stevenmendez.kanaapp",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.stevenmendez.kanaapp",
       "adaptiveIcon": {
         "backgroundColor": "#ef3924",
         "foregroundImage": "./assets/android-icon-foreground.png",
