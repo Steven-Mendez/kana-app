@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+@import 'uniwind';
+
+@theme {
+  --color-background: #fdfbf7;
+  --color-foreground: #32191c;
+}

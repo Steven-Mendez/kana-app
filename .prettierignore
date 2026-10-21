@@ -3,3 +3,4 @@
 .husky/_/
 pnpm-lock.yaml
 skills-lock.json
+src/uniwind-types.d.ts

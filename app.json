@@ -2,6 +2,7 @@
   "expo": {
     "name": "kana-app",
     "slug": "kana-app",
+    "scheme": "kana-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,7 +21,12 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "bundler": "metro",
+      "output": "static",
       "favicon": "./assets/favicon.png"
+    },
+    "experiments": {
+      "typedRoutes": true
     },
     "plugins": [
       [
@@ -31,7 +37,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ef3924"
         }
-      ]
+      ],
+      "expo-router"
     ]
   }
 }
