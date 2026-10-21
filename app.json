@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.stevenmendez.kanaapp",
       "supportsTablet": true
@@ -38,7 +38,15 @@
           "backgroundColor": "#ef3924"
         }
       ],
-      "expo-router"
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": false
+          }
+        }
+      ],
+      "expo-font"
     ]
   }
 }
