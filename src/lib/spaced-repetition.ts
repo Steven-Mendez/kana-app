@@ -17,6 +17,22 @@ export function ratingForAnswer(correct: boolean): Grade {
   return correct ? Rating.Good : Rating.Again;
 }
 
+export function recallProbability(card: Card, now: Date): number {
+  validateTime(now);
+  return scheduler.get_retrievability(card, now, false);
+}
+
+// Extra successful drills count toward this session, not another FSRS interval.
+// New/due cards and confirmed forgetting still update the durable memory model.
+export function shouldSchedulePractice(
+  card: Card | undefined,
+  rating: Grade,
+  now: Date,
+): boolean {
+  validateTime(now);
+  return !card || card.reps === 0 || card.due <= now || rating === Rating.Again;
+}
+
 export function scheduleReview(card: Card, rating: Grade, now: Date) {
   validateTime(now);
   if (card.last_review && now.getTime() < card.last_review.getTime())

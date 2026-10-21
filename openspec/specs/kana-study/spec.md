@@ -49,7 +49,7 @@ First use SHALL select only the five hiragana vowels. An empty selection SHALL d
 #### Scenario: One-card subset
 
 - **WHEN** only い is selected from the vowels
-- **THEN** starting free practice presents exactly い and the round completes after one answer
+- **THEN** starting free practice presents exactly い and the character can be answered repeatedly until the learner finishes
 
 ### Requirement: Selection preferences survive reopening
 
@@ -89,29 +89,6 @@ The application SHALL save selected kana identities and the last visible alphabe
 - **WHEN** saved character preferences contain only い and キュ
 - **THEN** reopening and Home resume use only those two cards
 - **AND** an explicit empty character list takes precedence over any legacy family list
-
-### Requirement: A study round presents the selected cards once
-
-Starting study SHALL snapshot the selected cards, shuffle their order, and show each card exactly once in that round. The study screen SHALL show one large kana prompt, its alphabet, a rōmaji input, answer actions, answered/total progress, and the running correct-answer count. The answer SHALL be hidden until the card is graded or revealed. A yōon combination SHALL count as one card. A round containing a single card SHALL be valid.
-
-The input SHALL accept Latin text without automatic capitalization or correction. Typing or pasting a whole normalized canonical reading or accepted alias on an ungraded card SHALL grade it correct automatically without Enter or Check. An incomplete or wrong draft SHALL remain editable and SHALL NOT grade or advance until explicit submission. Blank or whitespace-only submission SHALL leave the card ungraded and show an instruction to enter an answer or reveal it. Typing during correct feedback SHALL follow the interruptible continuation rules; any buffered draft SHALL be checked against the next prompt after transition, with its own exactly-once grade and commit.
-
-#### Scenario: Start a mixed round
-
-- **WHEN** the learner starts with ten selected cards
-- **THEN** the round has exactly those ten cards in shuffled order and starts at 0/10 answered
-- **AND** it never introduces an unselected card or repeats a card before completion
-
-#### Scenario: Incomplete and blank input
-
-- **WHEN** the learner types `s` for し without submitting
-- **THEN** no score changes and the prompt remains ungraded
-- **AND** submitting a blank answer likewise does not consume the card
-
-#### Scenario: One-card round
-
-- **WHEN** only the syllabic n family from one alphabet is selected
-- **THEN** a one-card round starts and can complete normally
 
 ### Requirement: Rōmaji checking accepts explicit reading variants
 
@@ -153,7 +130,7 @@ The following aliases SHALL be accepted for both alphabets; unlisted cards SHALL
 
 ### Requirement: Feedback resolves each card exactly once
 
-A correct input match or submission SHALL show correct feedback and the canonical reading, then advance automatically after brief feedback. Explicitly submitting an incorrect draft SHALL show incorrect feedback and the submitted answer, retain the input, and add the card to the round's mistakes, WITHOUT exposing the canonical reading in visible text or accessibility output. The next Enter or Show reading action SHALL reveal the canonical reading without grading again. A subsequent Enter or Next SHALL continue; the final card SHALL instead offer Show results. Explicit Reveal answer on an ungraded card SHALL show the canonical reading immediately and count the card as incorrect, including when the input is empty. Correct feedback SHALL also permit immediate continuation.
+A correct input match or submission SHALL show correct feedback and the canonical reading, then advance automatically after brief feedback. Explicitly submitting an incorrect draft SHALL show incorrect feedback and the submitted answer, retain the input, and add the card to the round's mistakes, WITHOUT exposing the canonical reading in visible text or accessibility output. The next Enter or Show reading action SHALL reveal the canonical reading without grading again. A subsequent Enter or Next SHALL continue; practice SHALL continue until the learner chooses Finish practice. Explicit Reveal answer on an ungraded card SHALL show the canonical reading immediately and count the card as incorrect, including when the input is empty. Correct feedback SHALL also permit immediate continuation.
 
 Once graded or revealed, a card SHALL NOT accept further grading or change its result. Repeated taps, stale callbacks, timers, or keyboard events SHALL NOT score it twice or skip the next ungraded card. The immutable grade SHALL preserve the submitted answer. During correct feedback, appended characters that extend the current answer to another accepted alias (such as n to nn) SHALL stay with the current prompt; otherwise only newly entered text SHALL carry to the next card and interrupt the pause once advancement is allowed. Wrong/revealed drafts SHALL clear on continuation. Feedback SHALL use text or symbols as well as color.
 
@@ -161,7 +138,7 @@ Once graded or revealed, a card SHALL NOT accept further grading or change its r
 
 - **WHEN** the learner types or pastes `a` for ア
 - **THEN** correct feedback is shown and both answered and correct counts increase by one
-- **AND** the next card or final results appears automatically after brief feedback without Enter
+- **AND** the next card appears automatically after brief feedback without Enter
 
 #### Scenario: Incorrect or revealed answer
 
@@ -194,27 +171,26 @@ Once graded or revealed, a card SHALL NOT accept further grading or change its r
 
 ### Requirement: Results support focused mistake review
 
-After every card is resolved and the final correct feedback completes or the learner acknowledges the final incorrect/revealed answer, the application SHALL show the round's total, correct and incorrect counts, and accuracy rounded to the nearest integer percentage. It SHALL list each missed card with its alphabet and canonical reading. Accuracy SHALL equal correct divided by total times 100; revealed cards SHALL count as incorrect.
+When the learner explicitly finishes, the application SHALL show graded attempt counts and accuracy rounded to the nearest integer percentage. Unanswered prompts and drafts SHALL be excluded. Each missed attempt SHALL retain its alphabet, submitted answer and canonical reading, including multiple attempts at the same character. Revealed answers SHALL count as incorrect. Zero graded answers SHALL show zero accuracy.
 
-The summary SHALL offer Repeat selection and Change selection, plus Review mistakes when mistakes exist. Repeat selection SHALL start a newly shuffled round using the original selection snapshot, including when invoked after review. Review mistakes SHALL start a newly shuffled round containing only the distinct mistakes from the just-finished round, with fresh counters and the same checking rules. Review SHALL NOT alter saved family selections or retroactively change a completed round's score. Restarting either kind of round SHALL focus an empty answer input.
+Free-practice results SHALL offer Repeat selection and Change selection, plus Review mistakes when mistakes exist. Repeat selection SHALL start continuous random practice from the original selection, including after a mistake drill. Review mistakes SHALL use only distinct missed identities from the just-finished session, reset counters and focus an empty input. Neither action SHALL mutate saved selection or FSRS progress. Intelligent-practice results SHALL provide an action returning to selection.
 
-#### Scenario: Complete a round with mistakes
+#### Scenario: Finish a mixed session
 
-- **WHEN** a five-card round finishes with three correct answers, one incorrect answer, and one revealed answer
-- **THEN** the summary shows 3 correct, 2 incorrect, and 60% accuracy
-- **AND** Review mistakes starts a two-card round at 0/2 answered with focused empty input
+- **WHEN** the learner finishes after three correct, one incorrect and one revealed answer
+- **THEN** results show five attempts, three correct, two incorrect and 60% accuracy
+- **AND** reviewing mistakes starts continuous practice with only distinct missed kana and zero answers
 
-#### Scenario: Complete a perfect round
+#### Scenario: Finish a perfect session
 
-- **WHEN** every card in a round is answered correctly
-- **THEN** the summary appears automatically with 100% accuracy and a no-mistakes message
-- **AND** Review mistakes is unavailable
+- **WHEN** the learner finishes after answering all attempted prompts correctly
+- **THEN** the summary shows 100% accuracy and no mistakes
+- **AND** results never appear automatically after merely covering the selection
 
 #### Scenario: Repeat after reviewing mistakes
 
-- **WHEN** the learner finishes a two-card review from an original ten-card selection and chooses Repeat selection
-- **THEN** a fresh ten-card round starts with reset counters and focused empty input
-- **AND** the saved selection remains unchanged
+- **WHEN** the learner finishes a two-kana mistake drill from a ten-kana selection and chooses Repeat selection
+- **THEN** all ten original kana are eligible again with reset counters and a focused empty input
 
 ### Requirement: Study navigation has predictable lifecycle behavior
 
@@ -267,13 +243,13 @@ The interface SHALL use a readable sans-serif hierarchy, Japanese-capable glyph 
 
 - **WHEN** a card is awaiting an answer
 - **THEN** Check answer is the filled primary action and Reveal answer is secondary
-- **AND** after grading, Next or Show results replaces Check answer as the filled primary action
+- **AND** after grading, Next replaces Check answer as the filled primary action
 
 ### Requirement: Screen composition keeps the learning task prominent
 
 Selection SHALL present an alphabet selector with per-alphabet counts, a category selector for the three catalog sections, alphabet-scoped bulk actions, and a vertically scrolling table of families in the chosen category. Practice and Syllabary SHALL share the same circular kana cell component, kana/rōmaji typography, surface colors and compact cell sizing. Practice and Syllabary SHALL use one shared catalog control layout with matching top padding, glyph-led alphabet controls featuring あ and ア, category capsules and vowel headers. At the same viewport, font size and initial scroll position, alphabet and category bounds SHALL align between screens. Practice selection counts SHALL be compact secondary badges that do not change control height. Neither screen SHALL insert introductory copy before the controls. Enlarged-text layouts SHALL use the same stacking rules. The grid SHALL contain individually selectable kana/rōmaji cells with explicit selected checks and SHALL NOT add family-name headings absent from Syllabary. Practice SHALL show a separate checkbox beside each row for one-touch family selection, with unchecked, mixed and checked states. These controls SHALL have at least 44 logical pixels of touch area and SHALL NOT introduce family-name headings. Individual cells SHALL remain independent controls, including in partially selected rows. Vowel headers SHALL align with their cells. Controls SHALL have touch targets of at least 44 logical pixels. Basic/voiced cells SHALL preserve A/I/U/E/O alignment and empty YA/WA positions at normal text sizes; yōon SHALL use A/U/O. Enlarged text SHALL reflow without clipping. Switching category SHALL preserve all selections. The initial category SHALL be basic kana. The combined count, a scheduled/free practice mode selector, and one Start study button SHALL occupy a compact bottom action area that does not cover the table. Scheduled review SHALL be the default mode; the selected mode SHALL be explicit and its purpose briefly explained. A zero-card selection SHALL disable Start study. On desktop web at 1024 logical pixels and wider, both catalogs SHALL use compact alphabet/category controls, a centered content width no greater than 1024 logical pixels, and two side-by-side blocks for categories with at least six families. Kana cells SHALL retain equal width and height with a maximum desktop diameter of 64 logical pixels. Native and narrow-web catalog layouts SHALL retain their mobile structure; phone side gutters SHALL be at least 16 logical pixels.
 
-Study SHALL prioritize a large central kana prompt with a subordinate alphabet label. A compact header SHALL contain an accessible Change selection close action, answered/total progress, correct count, and a thin progress indicator. The underlined rōmaji input, feedback, and current action SHALL form a bottom answer area reachable with the software keyboard. The input placeholder SHALL NOT disclose the answer. Results SHALL use a concise summary, actual round score, best consecutive-correct streak for this round, and a plain mistakes list with submitted-answer corrections. A compact current consecutive-correct count MAY appear alongside answered/total progress during typing. Review mistakes SHALL be primary when available and Repeat selection primary otherwise; scheduled rounds SHALL return to selection.
+Study SHALL prioritize a large central kana prompt with a subordinate alphabet label. A compact header SHALL contain an accessible Change selection close action, cumulative answered count, correct count, and an explicit Finish practice action. The underlined rōmaji input, feedback, and current action SHALL form a bottom answer area reachable with the software keyboard. The input placeholder SHALL NOT disclose the answer. Results SHALL use a concise summary, actual round score, best consecutive-correct streak for this round, and a plain mistakes list with submitted-answer corrections. A compact current consecutive-correct count MAY appear alongside cumulative answered count during typing. Review mistakes SHALL be primary when available and Repeat selection primary otherwise; scheduled rounds SHALL return to selection.
 
 The study input SHALL be no wider than 192 logical pixels. Answer actions SHALL remain compact; an icon-only Check action SHALL expose the same accessible label as the text action. The unanswered state SHALL avoid repeated instructional copy beneath the input; whitespace and the kana SHALL dominate the composition. The transient-round explanation SHALL remain a short footer sentence. Content SHALL scroll when screen height or enlarged text requires it.
 
@@ -296,7 +272,7 @@ The study surface SHALL NOT add guided-path navigation, lesson locks, daily or h
 
 - **WHEN** the learner chooses Free practice and activates Start study
 - **THEN** a transient free-practice round starts with the exact selected kana
-- **AND** choosing Scheduled review instead starts the existing due-card flow
+- **AND** choosing intelligent review instead starts adaptive practice with the full selection
 
 #### Scenario: Focused study on a wide screen
 
@@ -308,11 +284,11 @@ The study surface SHALL NOT add guided-path navigation, lesson locks, daily or h
 
 - **WHEN** the software keyboard opens
 - **THEN** the input and answer action remain reachable, the prompt stays readable, and explicit submission still grades only once
-- **AND** feedback and Next/results stay reachable after grading
+- **AND** feedback and Next and Finish practice stay reachable after grading
 
 #### Scenario: Simplified results
 
-- **WHEN** a free-practice round finishes with mistakes
+- **WHEN** the learner explicitly finishes free practice with mistakes
 - **THEN** accuracy and correct/incorrect totals appear above a plain mistakes list
 - **AND** Review mistakes is the only filled primary action, with Repeat selection and Change selection secondary
 
@@ -350,7 +326,7 @@ At normal system text sizes on portrait phones, the complete answer input, gradi
 
 - **WHEN** a learner submits an incorrect answer on a portrait phone at normal text size
 - **THEN** the entire input, incorrect feedback, submitted answer, and Show reading button are visible above the keyboard without scrolling
-- **AND** revealing the reading leaves the complete correction and Next or results button visible together
+- **AND** revealing the reading leaves the complete correction and Next and Finish practice button visible together
 - **AND** the prompt shrinks to leave room for feedback instead of clipping the button
 
 #### Scenario: Enlarged text and reduced height
@@ -398,3 +374,26 @@ Current and best consecutive-correct streaks SHALL be derived only from this rou
 - **THEN** best streak is two and current streak is zero
 - **AND** the summary preserves the incorrect submitted draft and identifies the revealed answer
 - **AND** reviewing mistakes begins with zero streak and an empty focused input
+
+### Requirement: Study continues until the learner finishes
+
+Starting study SHALL snapshot the selected cards as a reusable pool and present randomly selected prompts continuously until the learner explicitly finishes or leaves. The first prompt SHALL also be randomized. Only selected identities SHALL appear. Immediate repetition SHALL be avoided when more than one identity is available. A single selected character SHALL remain repeatable. Free practice SHALL sample uniformly among alternatives; intelligent practice SHALL use adaptive weights. A yōon combination SHALL count as one character.
+
+The input SHALL preserve existing normalized-answer, alias, blank-input, correct auto-advance and wrong-answer acknowledgement behavior. The header SHALL show cumulative answered and correct counts without a fixed total or completion bar. An accessible Finish practice action SHALL show results based only on graded attempts, ignoring unfinished drafts, and SHALL wait for any graded review to save successfully. Repeated mistakes SHALL remain distinct result entries but mistake drills SHALL deduplicate the pool.
+
+#### Scenario: Continue beyond the selection size
+
+- **WHEN** the learner answers more prompts than the number of selected kana
+- **THEN** practice continues using only the selected pool without an automatic results screen
+- **AND** finishing explicitly shows totals and accuracy for all graded attempts
+
+#### Scenario: Single character and empty finish
+
+- **WHEN** one kana is selected
+- **THEN** it can repeat indefinitely and stale events cannot grade the next occurrence
+- **AND** finishing before answering produces zero answers without scoring the draft
+
+#### Scenario: Reopen the same selection
+
+- **WHEN** the learner starts multiple sessions with the same selection
+- **THEN** the first and subsequent prompts are random rather than fixed catalog or due order

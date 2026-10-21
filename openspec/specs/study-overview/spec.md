@@ -45,7 +45,7 @@ Dashboard and Progress SHALL derive counts from existing local FSRS cards. Revie
 #### Scenario: Review pending kana
 
 - **WHEN** the learner starts the due-only action
-- **THEN** only the snapshot of due reviewed kana is eligible, rechecked by scheduled study
+- **THEN** only the snapshot of due reviewed kana is eligible, rechecked when study begins; that pool remains repeatable until explicit finish
 - **AND** new or future-due kana in the same families are not introduced
 
 #### Scenario: No saved reviews

@@ -90,7 +90,12 @@ export function shuffle<T>(items: readonly T[]): T[] {
   return result;
 }
 
-export type Grade = { card: KanaCard; answer: string | null; correct: boolean };
+export type Grade = {
+  attempt: number;
+  card: KanaCard;
+  answer: string | null;
+  correct: boolean;
+};
 export type Round = {
   original: readonly KanaCard[];
   deck: KanaCard[];
@@ -137,19 +142,22 @@ export function roundScore(round: Round) {
     mistakes,
     streak,
     bestStreak,
-    accuracy: round.deck.length
-      ? Math.round((correct / round.deck.length) * 100)
+    accuracy: round.grades.length
+      ? Math.round((correct / round.grades.length) * 100)
       : 0,
   };
 }
 
 export type StudyAction =
   | { type: 'input'; cardId: string; value: string }
-  | { type: 'submit' | 'reveal' | 'next'; cardId: string }
+  | { type: 'submit' | 'reveal'; cardId: string }
+  | { type: 'next'; cardId: string; nextCard?: KanaCard }
+  | { type: 'finish' }
   | { type: 'restart'; round: Round };
 
 export function studyReducer(round: Round, action: StudyAction): Round {
   if (action.type === 'restart') return round.finished ? action.round : round;
+  if (action.type === 'finish') return { ...round, finished: true };
   const card = round.deck[round.index];
   if (round.finished || !card || card.id !== action.cardId) return round;
   const graded = round.grades.length > round.index;
@@ -160,6 +168,14 @@ export function studyReducer(round: Round, action: StudyAction): Round {
       (!round.grades[round.index].correct && !round.readingVisible)
     )
       return round;
+    if (action.nextCard) {
+      if (!round.original.some((card) => card.id === action.nextCard!.id))
+        return round;
+      round = {
+        ...round,
+        deck: [...round.deck.slice(0, round.index + 1), action.nextCard],
+      };
+    }
     if (round.index === round.deck.length - 1)
       return { ...round, finished: true };
     return {
@@ -202,7 +218,12 @@ export function studyReducer(round: Round, action: StudyAction): Round {
     needsAnswer: false,
     grades: [
       ...round.grades,
-      { card, answer, correct: answer !== null && acceptsAnswer(card, answer) },
+      {
+        attempt: round.index,
+        card,
+        answer,
+        correct: answer !== null && acceptsAnswer(card, answer),
+      },
     ],
   };
 }

@@ -35,7 +35,7 @@ export function StudyResults({
           {accuracy}%
         </Text>
         <Text className="text-sm text-muted-foreground">
-          {t.accuracy} · {round.deck.length} kana
+          {t.accuracy} · {t.answered(round.grades.length)}
         </Text>
         <Text className="text-center text-base text-foreground">
           {t.totals(correct, mistakes.length)}
@@ -88,9 +88,9 @@ export function StudyResults({
               {t.correctionDetail}
             </Text>
           </View>
-          {corrections.map(({ card, answer }) => (
+          {corrections.map(({ card, answer, attempt }) => (
             <View
-              key={card.id}
+              key={`${card.id}:${attempt}`}
               testID={`correction-${card.id}`}
               className="flex-row items-start gap-4 border-b border-border py-3"
             >

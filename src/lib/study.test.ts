@@ -155,7 +155,8 @@ test('scores include reveals; review resets scores and repeat retains the origin
   assert.equal(roundScore(round).accuracy, 60);
   const perfect = {
     ...review,
-    grades: review.deck.map((card) => ({
+    grades: review.deck.map((card, attempt) => ({
+      attempt,
       card,
       correct: true,
       answer: card.reading,

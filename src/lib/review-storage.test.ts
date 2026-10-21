@@ -132,17 +132,43 @@ test('malformed, mismatched, unsupported, or inconsistent history is never overw
   expect(storage.setItem).not.toHaveBeenCalled();
 });
 
-test('rejects unknown kana, early reviews, and invalid times without changing data', async () => {
+test('rejects unknown kana and invalid times without changing data', async () => {
   const { store, storage } = memoryStorage();
   await store.commit(request);
   storage.setItem.mockClear();
   for (const invalid of [
     { ...request, cardId: 'unknown' },
     { ...request, id: '' },
-    { ...request, id: 'early' },
     { ...request, id: 'invalid', reviewedAt: new Date('invalid') },
     { ...request, id: 'past', reviewedAt: new Date(0) },
   ])
     await expect(store.commit(invalid)).rejects.toThrow();
   expect(storage.setItem).not.toHaveBeenCalled();
+});
+
+test('intentional repeated reviews before due time keep distinct FSRS logs and survive reopening', async () => {
+  const { store, storage } = memoryStorage();
+  const first = await store.commit(request);
+  const early = {
+    ...request,
+    id: 'early',
+    reviewedAt: new Date(request.reviewedAt.getTime() + 500),
+  };
+  expect(early.reviewedAt.getTime()).toBeLessThan(
+    new Date(first.card.due).getTime(),
+  );
+  const second = await store.commit(early);
+  const expected = scheduleReview(
+    hydrateCard(first.card),
+    early.rating,
+    early.reviewedAt,
+  );
+  expect(hydrateCard(second.card)).toEqual(expected.card);
+  expect(second.reviews).toHaveLength(2);
+  expect((await store.commit(early)).reviews).toHaveLength(2);
+  expect(
+    (await createReviewStorage(storage).load([request.cardId])).get(
+      request.cardId,
+    ),
+  ).toEqual(expected.card);
 });

@@ -13,7 +13,7 @@ import { ScheduledStudy } from '@/components/scheduled-study';
 import { StudySession } from '@/components/study-session';
 import { cards } from '@/data/kana';
 import { copy } from '@/lib/copy';
-import type { ReviewRequest } from '@/lib/review-storage';
+import { createReviewStorage, type ReviewRequest } from '@/lib/review-storage';
 import { reviews } from '@/lib/reviews';
 import { initializeCard, scheduleReview } from '@/lib/spaced-repetition';
 
@@ -45,20 +45,24 @@ async function enter() {
   });
 }
 
+async function finishPractice() {
+  await fireEvent.press(screen.getByTestId('finish-study'));
+}
+
 async function advanceFeedback() {
   await act(async () => jest.advanceTimersByTime(250));
 }
 
 beforeEach(() => {
   jest.useFakeTimers({ now });
-  jest.spyOn(Math, 'random').mockReturnValue(0.999);
+  jest.spyOn(Math, 'random').mockReturnValue(0);
 });
 afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
 });
 
-test('correct typing commits once, blocks advancement while saving, then advances in due order', async () => {
+test('correct typing commits once, blocks advancement while saving, then advances without repeating the same kana', async () => {
   const user = userEvent.setup();
   let finish!: () => void;
   const commit = jest.fn(
@@ -81,6 +85,7 @@ test('correct typing commits once, blocks advancement while saving, then advance
     }),
   );
   expect(screen.getByText(t.reviewSaving)).toBeOnTheScreen();
+  expect(screen.getByTestId('finish-study')).toBeDisabled();
   expect(screen.getByRole('button', { name: t.next })).toBeDisabled();
   expect(
     screen.getByText(`${t.correct} · ${deck[0].reading}`),
@@ -93,7 +98,7 @@ test('correct typing commits once, blocks advancement while saving, then advance
   expect(
     screen.getByLabelText(t.romaji(deck[1].kana, 'Hiragana')),
   ).toHaveDisplayValue('');
-  expect(screen.getByText(t.answered(1, 2))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(1))).toBeOnTheScreen();
   expect(screen.getByTestId('romaji-input')).toBe(input);
 });
 
@@ -112,6 +117,8 @@ test('a wrong draft can be erased and corrected without Enter or an incorrect gr
     expect.objectContaining({ rating: Rating.Good }),
   );
   await advanceFeedback();
+  expect(screen.queryByText(t.scheduledComplete)).not.toBeOnTheScreen();
+  await finishPractice();
   expect(screen.getByText(t.scheduledComplete)).toBeOnTheScreen();
 });
 
@@ -136,6 +143,8 @@ test('n/nn extensions and pasted aliases do not leak a trailing character to the
   await fireEvent.changeText(input, ' A ');
   await advanceFeedback();
   expect(commit).toHaveBeenCalledTimes(2);
+  expect(screen.queryByText(t.scheduledComplete)).not.toBeOnTheScreen();
+  await finishPractice();
   expect(screen.getByText(t.scheduledComplete)).toBeOnTheScreen();
 });
 
@@ -169,6 +178,8 @@ test('wrong Enter keeps the reading out of visible and announced feedback until 
     expect(screen.queryByText(t.scheduledComplete)).not.toBeOnTheScreen();
     expect(commit).toHaveBeenCalledTimes(1);
     await enter();
+    expect(screen.queryByText(t.scheduledComplete)).not.toBeOnTheScreen();
+    await finishPractice();
     expect(screen.getByText(t.scheduledComplete)).toBeOnTheScreen();
   } finally {
     if (previousOS === undefined) delete process.env.EXPO_OS;
@@ -207,6 +218,8 @@ test.each(['wrong', 'reveal'] as const)(
       expect(commit).toHaveBeenCalledTimes(1);
     }
     await enter();
+    expect(screen.queryByText(t.scheduledComplete)).not.toBeOnTheScreen();
+    await finishPractice();
     expect(screen.getByText(t.scheduledComplete)).toBeOnTheScreen();
     expect(
       screen.queryByRole('button', { name: t.repeat }),
@@ -225,12 +238,13 @@ test('a failed save retries the original rating, identity, and timestamp', async
   await render(<StudySession cards={[deck[0]]} onCommitReview={commit} />);
   await user.press(screen.getByRole('button', { name: t.reveal }));
   expect(await screen.findByRole('alert')).toHaveTextContent(t.reviewSaveError);
-  expect(screen.getByRole('button', { name: t.results })).toBeDisabled();
+  expect(screen.getByTestId('finish-study')).toBeDisabled();
+  expect(screen.getByRole('button', { name: t.next })).toBeDisabled();
   jest.setSystemTime(new Date('2026-03-09T06:55:00.000Z'));
   await user.press(screen.getByRole('button', { name: t.retry }));
   expect(commit).toHaveBeenCalledTimes(2);
   expect(commit.mock.calls[1][0]).toEqual(commit.mock.calls[0][0]);
-  expect(screen.getByRole('button', { name: t.results })).toBeEnabled();
+  expect(screen.getByRole('button', { name: t.next })).toBeEnabled();
   expect(screen.queryByRole('alert')).not.toBeOnTheScreen();
 });
 
@@ -239,22 +253,30 @@ test('free-practice mistake drills remain transient and never touch review stora
   await render(<StudySession cards={[deck[0]]} />);
   await user.press(screen.getByRole('button', { name: t.reveal }));
   await enter();
+  await finishPractice();
   await user.press(screen.getByRole('button', { name: t.review }));
-  expect(screen.getByText(t.answered(0, 1))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(0))).toBeOnTheScreen();
   await user.type(screen.getByPlaceholderText('Rōmaji'), deck[0].reading);
   await advanceFeedback();
+  expect(screen.queryByText(t.perfect)).not.toBeOnTheScreen();
+  await finishPractice();
   expect(screen.getByText(t.perfect)).toBeOnTheScreen();
   expect(reviews.commit).not.toHaveBeenCalled();
   expect(reviews.load).not.toHaveBeenCalled();
 });
 
 test('success keeps the input mounted and lets early typing interrupt feedback without losing characters', async () => {
+  jest
+    .mocked(Math.random)
+    .mockReturnValueOnce(0)
+    .mockReturnValueOnce(0)
+    .mockReturnValueOnce(0.999);
   await render(<StudySession cards={cards.slice(0, 3)} />);
   const input = screen.getByTestId('romaji-input');
   expect(input.props.autoFocus).toBe(true);
   expect(input.props.submitBehavior).toBe('submit');
   await fireEvent.changeText(input, ' A ');
-  expect(screen.getByText(t.answered(1, 3))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(1))).toBeOnTheScreen();
   expect(screen.getByTestId('answer-feedback')).toHaveTextContent(
     `${t.correct} · a`,
   );
@@ -265,17 +287,19 @@ test('success keeps the input mounted and lets early typing interrupt feedback w
   expect(screen.getByTestId('romaji-input')).toBe(input);
   expect(input).toHaveDisplayValue('i');
   await act(async () => jest.advanceTimersByTime(0));
-  expect(screen.getByText(t.answered(2, 3))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(2))).toBeOnTheScreen();
   await advanceFeedback();
   expect(screen.getByTestId('study-prompt')).toHaveTextContent('う');
   expect(input).toHaveDisplayValue('');
   await fireEvent.changeText(input, 'u');
   await advanceFeedback();
+  expect(screen.queryByText(t.perfect)).not.toBeOnTheScreen();
+  await finishPractice();
   expect(screen.getByText(t.perfect)).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: t.repeat }));
   expect(screen.getByTestId('romaji-input')).toHaveDisplayValue('');
   expect(screen.getByTestId('romaji-input').props.autoFocus).toBe(true);
-  expect(screen.getByText(t.answered(0, 3))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(0))).toBeOnTheScreen();
 });
 
 test('duplicates and old handlers cannot grade, advance, or edit a later card or restarted round', async () => {
@@ -297,17 +321,18 @@ test('duplicates and old handlers cannot grade, advance, or edit a later card or
   });
   await fireEvent(input, 'submitEditing', { nativeEvent: { text: 'a' } });
   expect(input).toHaveDisplayValue('');
-  expect(screen.getByText(t.answered(1, 2))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(1))).toBeOnTheScreen();
   await fireEvent.changeText(input, 'i');
   await enter();
   await advanceFeedback();
+  await finishPractice();
   await fireEvent.press(screen.getByRole('button', { name: t.repeat }));
   await act(async () => {
     oldSubmit({ nativeEvent: { text: 'a' } });
     oldInput('a');
     oldNext({ nativeEvent: { text: '' } });
   });
-  expect(screen.getByText(t.answered(0, 2))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(0))).toBeOnTheScreen();
   expect(screen.getByTestId('romaji-input')).toHaveDisplayValue('');
 });
 
@@ -342,7 +367,7 @@ test.each(['wrong', 'reveal'] as const)(
     });
     expect(screen.getByTestId('romaji-input')).toBe(input);
     expect(input).toHaveDisplayValue('');
-    expect(screen.getByText(t.answered(1, 2))).toBeOnTheScreen();
+    expect(screen.getByText(t.answered(1))).toBeOnTheScreen();
     expect(screen.getByTestId('study-prompt')).toHaveTextContent('い');
   },
 );
@@ -386,24 +411,29 @@ test('slow saving and keyboard retry retain the review and buffered next answer'
   expect(screen.getByTestId('study-prompt')).toHaveTextContent('い');
   expect(input).toHaveDisplayValue('i');
   await act(async () => jest.advanceTimersByTime(0));
-  expect(screen.getByText(t.answered(2, 2))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(2))).toBeOnTheScreen();
   expect(commit).toHaveBeenCalledTimes(3);
   expect(commit.mock.calls[2][0].cardId).toBe(deck[1].id);
   await act(async () => finish());
   await advanceFeedback();
+  expect(screen.queryByText(t.scheduledComplete)).not.toBeOnTheScreen();
+  await finishPractice();
   expect(screen.getByText(t.scheduledComplete)).toBeOnTheScreen();
 });
 
-test('accepted aliases grade without Enter and correct last cards complete automatically', async () => {
+test('accepted aliases grade without Enter and a single selected card repeats until explicit finish', async () => {
   const shi = cards.find((card) => card.kana === 'し')!;
   await render(<StudySession cards={[shi]} />);
   const input = screen.getByTestId('romaji-input');
   await fireEvent.changeText(input, ' SI ');
-  expect(screen.getByText(t.answered(1, 1))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(1))).toBeOnTheScreen();
   expect(screen.getByTestId('answer-feedback')).toHaveTextContent(
     `${t.correct} · shi`,
   );
   await advanceFeedback();
+  expect(screen.queryByText('100%')).not.toBeOnTheScreen();
+  expect(screen.getByTestId('romaji-input')).toBe(input);
+  await finishPractice();
   expect(screen.getByText('100%')).toBeOnTheScreen();
 });
 
@@ -417,7 +447,7 @@ test('typing and submitting in the same event batch uses the latest draft exactl
     submit({ nativeEvent: { text: 'a' } });
     submit({ nativeEvent: { text: 'a' } });
   });
-  expect(screen.getByText(t.answered(1, 2))).toBeOnTheScreen();
+  expect(screen.getByText(t.answered(1))).toBeOnTheScreen();
   await advanceFeedback();
   expect(screen.getByTestId('study-prompt')).toHaveTextContent('い');
   expect(input).toHaveDisplayValue('');
@@ -459,7 +489,7 @@ test('scheduled loading exposes a retryable error, next-due time, and refreshes 
     .mocked(reviews.load)
     .mockRejectedValueOnce(new Error('unavailable'))
     .mockResolvedValue(new Map([[deck[0].id, saved]]));
-  await render(<ScheduledStudy cards={[deck[0]]} />);
+  await render(<ScheduledStudy cards={[deck[0]]} dueOnly />);
   expect(await screen.findByRole('alert')).toHaveTextContent(t.reviewLoadError);
   await user.press(screen.getByRole('button', { name: t.retry }));
   expect(await screen.findByText(t.nothingDue)).toBeOnTheScreen();
@@ -499,6 +529,7 @@ test('typing summary retains original mistakes and resets session streak when re
   await enter();
   await fireEvent.press(screen.getByRole('button', { name: t.reveal }));
   await enter();
+  await finishPractice();
   expect(screen.getByLabelText(`${t.bestStreak}: 1`)).toBeOnTheScreen();
   expect(screen.getByText(t.yourAnswer('wrong'))).toBeOnTheScreen();
   expect(screen.queryByText(t.yourAnswer('edited'))).not.toBeOnTheScreen();
@@ -508,4 +539,72 @@ test('typing summary retains original mistakes and resets session streak when re
     t.streakCount(0),
   );
   expect(screen.getByTestId('romaji-input')).toHaveDisplayValue('');
+});
+
+test('finishing excludes an unfinished draft and does not commit it', async () => {
+  const commit = jest.fn(async (_request: ReviewRequest) => {});
+  await render(<StudySession cards={deck} onCommitReview={commit} />);
+  await fireEvent.changeText(screen.getByTestId('romaji-input'), 'unfinished');
+  await finishPractice();
+  expect(screen.getByText('0%')).toBeOnTheScreen();
+  expect(screen.getByText(t.totals(0, 0))).toBeOnTheScreen();
+  expect(commit).not.toHaveBeenCalled();
+});
+
+test('a repeated character creates a fresh review and stale handlers cannot grade its next occurrence', async () => {
+  const commit = jest.fn(async (_request: ReviewRequest) => {});
+  await render(<StudySession cards={[deck[0]]} onCommitReview={commit} />);
+  const input = screen.getByTestId('romaji-input');
+  const stale = input.props.onChangeText;
+  for (let index = 0; index < 8; index++) {
+    await fireEvent.changeText(input, 'a');
+    await advanceFeedback();
+    await act(async () => stale('a'));
+    expect(input).toHaveDisplayValue('');
+    expect(screen.queryByText(t.completed)).not.toBeOnTheScreen();
+  }
+  expect(commit).toHaveBeenCalledTimes(8);
+  expect(new Set(commit.mock.calls.map(([request]) => request.id)).size).toBe(
+    8,
+  );
+  await finishPractice();
+  expect(screen.getByText(t.totals(8, 0))).toBeOnTheScreen();
+});
+
+test('smart practice accepts future-due kana without inflating FSRS, but saves a subsequent mistake', async () => {
+  const data = new Map<string, string>();
+  const store = createReviewStorage({
+    getItem: async (key) => data.get(key) ?? null,
+    setItem: async (key, value) => {
+      data.set(key, value);
+    },
+  });
+  for (const card of deck)
+    await store.commit({
+      id: `seed:${card.id}`,
+      cardId: card.id,
+      rating: Rating.Good,
+      reviewedAt: now,
+    });
+  const progress = await store.load(deck.map((card) => card.id));
+  expect([...progress.values()].every((card) => card.due > now)).toBe(true);
+  jest.mocked(reviews.load).mockResolvedValueOnce(progress);
+  jest.mocked(reviews.commit).mockImplementation(store.commit);
+  await render(<ScheduledStudy cards={deck} />);
+  const input = await screen.findByTestId('romaji-input');
+  for (let index = 0; index < 6; index++) {
+    await fireEvent.changeText(input, deck[index % 2].reading);
+    await advanceFeedback();
+    expect(screen.queryByText(t.completed)).not.toBeOnTheScreen();
+  }
+  expect(reviews.commit).not.toHaveBeenCalled();
+  expect([...progress.values()].map((card) => card.reps)).toEqual([1, 1]);
+  await fireEvent.press(screen.getByRole('button', { name: t.reveal }));
+  expect(reviews.commit).toHaveBeenCalledTimes(1);
+  expect([...progress.values()].map((card) => card.reps)).toEqual([2, 1]);
+  expect(
+    (await store.load(deck.map((card) => card.id))).get(deck[0].id)?.reps,
+  ).toBe(2);
+  await finishPractice();
+  expect(screen.getByText(t.totals(6, 1))).toBeOnTheScreen();
 });

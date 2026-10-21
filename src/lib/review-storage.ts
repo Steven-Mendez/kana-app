@@ -184,8 +184,6 @@ export function createReviewStorage(storage: Storage) {
           return saved!;
         }
         const current = saved ? hydrateCard(saved.card) : initializeCard(now);
-        if (current.due.getTime() > now.getTime())
-          throw new Error('Card is not due');
         const { card, log } = scheduleReview(current, rating, now);
         const next: StoredProgress = {
           version: 1,

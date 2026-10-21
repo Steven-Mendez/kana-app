@@ -60,7 +60,8 @@ const es = {
   basic: 'Básicos',
   voiced: 'Tenten / Maru',
   studyMode: 'Modo de estudio',
-  scheduledHint: 'Kana nuevos y repasos pendientes. Guarda tu progreso.',
+  scheduledHint:
+    'Practica sin límite. Verás más los kana que necesitas repasar.',
   freeHint: 'Todos los kana elegidos, sin cambiar tus repasos.',
   yoon: 'Combinados',
   selected: (count: number) =>
@@ -70,9 +71,10 @@ const es = {
   emptySelection: 'Selecciona al menos un kana para empezar.',
   start: 'Empezar a estudiar',
   freePractice: 'Práctica libre',
-  scheduledReview: 'Repaso espaciado',
+  scheduledReview: 'Repaso inteligente',
   reviewSaving: 'Guardando repaso…',
   reviewSaved: 'Repaso guardado',
+  practiceCounted: 'Acierto contado en esta práctica',
   reviewSaveError:
     'No se pudo guardar el repaso. Reintenta antes de continuar; si sales, esta respuesta podría perderse.',
   reviewLoadError:
@@ -82,11 +84,12 @@ const es = {
   nothingDue: 'No hay repasos pendientes en tu selección.',
   nextReview: (date: string) => `Próximo repaso: ${date}`,
   scheduledDetail:
-    'Los repasos guardados se conservan en este dispositivo. La puntuación de la ronda es temporal.',
+    'Tus respuestas ajustan la frecuencia de los kana. Tú decides cuándo terminar.',
   scheduledComplete:
-    'Repasos guardados. Vuelve a tu selección para consultar los próximos.',
+    'Repasos guardados. Puedes volver a practicar cuando quieras.',
   changeSelection: 'Cambiar selección',
-  answered: (count: number, total: number) => `${count}/${total} respondidos`,
+  answered: (count: number) => `${count} respuesta${count === 1 ? '' : 's'}`,
+  finishPractice: 'Terminar práctica',
   correctCount: (count: number) => `Aciertos: ${count}`,
   streakCount: (count: number) => `Racha: ${count}`,
   bestStreak: 'Mejor racha',
@@ -108,8 +111,8 @@ const es = {
   next: 'Siguiente',
   check: 'Comprobar',
   reveal: 'Revelar',
-  temporary: 'Ronda temporal: se reinicia al salir o recargar.',
-  completed: 'Ronda completada',
+  temporary: 'Practica cuanto quieras. La puntuación se reinicia al salir.',
+  completed: 'Práctica terminada',
   accuracy: 'Precisión',
   totals: (correct: number, incorrect: number) =>
     `${correct} correctos · ${incorrect} incorrectos`,
@@ -208,7 +211,8 @@ const en: typeof es = {
   basic: 'Basic',
   voiced: 'Tenten / Maru',
   studyMode: 'Study mode',
-  scheduledHint: 'New and due kana. Saves your progress.',
+  scheduledHint:
+    'Practice without limits. See kana you need to review more often.',
   freeHint: 'All selected kana, without changing your reviews.',
   yoon: 'Combined',
   selected: (count) => `${count} kana selected`,
@@ -216,9 +220,10 @@ const en: typeof es = {
   emptySelection: 'Select at least one kana to begin.',
   start: 'Start studying',
   freePractice: 'Free practice',
-  scheduledReview: 'Spaced review',
+  scheduledReview: 'Smart review',
   reviewSaving: 'Saving review…',
   reviewSaved: 'Review saved',
+  practiceCounted: 'Correct answer counted for this practice',
   reviewSaveError:
     'Your review could not be saved. Retry before continuing; leaving may lose this answer.',
   reviewLoadError:
@@ -228,11 +233,11 @@ const en: typeof es = {
   nothingDue: 'No reviews are due in your selection.',
   nextReview: (date) => `Next review: ${date}`,
   scheduledDetail:
-    'Saved reviews stay on this device. The round score is temporary.',
-  scheduledComplete:
-    'Reviews saved. Return to your selection to check what’s due next.',
+    'Your answers adjust how often kana appear. You decide when to finish.',
+  scheduledComplete: 'Reviews saved. You can practice again whenever you like.',
   changeSelection: 'Change selection',
-  answered: (count, total) => `${count}/${total} answered`,
+  answered: (count) => `${count} answered`,
+  finishPractice: 'Finish practice',
   correctCount: (count) => `Correct: ${count}`,
   streakCount: (count) => `Streak: ${count}`,
   bestStreak: 'Best streak',
@@ -254,8 +259,8 @@ const en: typeof es = {
   next: 'Next',
   check: 'Check',
   reveal: 'Reveal',
-  temporary: 'Temporary round: resets when you leave or reload.',
-  completed: 'Round complete',
+  temporary: 'Practice as long as you like. Scores reset when you leave.',
+  completed: 'Practice finished',
   accuracy: 'Accuracy',
   totals: (correct, incorrect) => `${correct} correct · ${incorrect} incorrect`,
   review: 'Review mistakes',

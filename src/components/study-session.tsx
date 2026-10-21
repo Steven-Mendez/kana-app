@@ -35,15 +35,21 @@ import {
   type StudyAction,
 } from '@/lib/study';
 import { usePreferences } from '@/lib/preferences-provider';
-import type { ReviewRequest } from '@/lib/review-storage';
+import type { ReviewRequest, StoredProgress } from '@/lib/review-storage';
 import { ratingForAnswer } from '@/lib/spaced-repetition';
+import { nextPracticeCard } from '@/lib/practice-sampling';
+import type { Card } from 'ts-fsrs';
 
 export function StudySession({
   cards,
   onCommitReview,
+  progress,
 }: {
   cards: KanaCard[];
-  onCommitReview?: (request: ReviewRequest) => Promise<unknown>;
+  progress?: ReadonlyMap<string, Card>;
+  onCommitReview?: (
+    request: ReviewRequest,
+  ) => Promise<StoredProgress | { practiceOnly: true } | void>;
 }) {
   const { t, preferences } = usePreferences();
   const insets = useSafeAreaInsets();
@@ -51,7 +57,7 @@ export function StudySession({
   const placeholderColor = useCSSVariable('--color-muted-foreground');
   const selectionColor = useCSSVariable('--color-ring');
   const [round, setRound] = useState(() =>
-    createRound(cards, cards, !onCommitReview),
+    createRound([nextPracticeCard(cards, [], progress)], cards, false),
   );
   const currentRound = useRef(round);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
@@ -61,6 +67,7 @@ export function StudySession({
   const [saveStatus, setSaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
   >('idle');
+  const [practiceOnly, setPracticeOnly] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [answerHeight, setAnswerHeight] = useState(0);
@@ -111,13 +118,23 @@ export function StudySession({
       (onCommitReview && saveStatus !== 'saved')
     )
       return;
-    if (!dispatch({ type: 'next', cardId: card.id })) return;
+    if (
+      !dispatch({
+        type: 'next',
+        cardId: card.id,
+        nextCard: nextPracticeCard(round.original, round.grades, progress),
+      })
+    )
+      return;
     pendingReview.current = null;
     setSaveStatus('idle');
     input.current?.focus();
   }, [
     grade,
     round.readingVisible,
+    round.original,
+    round.grades,
+    progress,
     onCommitReview,
     saveStatus,
     dispatch,
@@ -172,8 +189,11 @@ export function StudySession({
     const request = pendingReview.current;
     setSaveStatus('saving');
     try {
-      await onCommitReview(request);
-      if (pendingReview.current === request) setSaveStatus('saved');
+      const result = await onCommitReview(request);
+      if (pendingReview.current === request) {
+        setPracticeOnly(!!result && 'practiceOnly' in result);
+        setSaveStatus('saved');
+      }
     } catch {
       if (pendingReview.current === request) setSaveStatus('error');
     } finally {
@@ -234,7 +254,7 @@ export function StudySession({
             onLayout={(event) =>
               setHeaderHeight(event.nativeEvent.layout.height)
             }
-            className="w-full max-w-lg flex-row items-center gap-4 px-4 py-2 sm:px-6"
+            className="w-full max-w-lg flex-row flex-wrap items-center gap-2 px-4 py-2 sm:px-6"
           >
             <Pressable
               accessibilityRole="button"
@@ -251,9 +271,24 @@ export function StudySession({
             {!round.finished ? (
               <StudyProgress
                 answered={round.grades.length}
-                total={round.deck.length}
                 correct={score.correct}
                 streak={score.streak}
+              />
+            ) : null}
+            {!round.finished ? (
+              <Action
+                testID="finish-study"
+                label={t.finishPractice}
+                disabled={!!onCommitReview && !!grade && saveStatus !== 'saved'}
+                onPress={() => {
+                  if (
+                    onCommitReview &&
+                    pendingReview.current &&
+                    saveStatus !== 'saved'
+                  )
+                    return;
+                  dispatch({ type: 'finish' });
+                }}
               />
             ) : null}
           </View>
@@ -266,13 +301,28 @@ export function StudySession({
               onReview={() =>
                 dispatch({
                   type: 'restart',
-                  round: createRound(score.mistakes, round.original),
+                  round: (() => {
+                    const mistakes = [
+                      ...new Map(
+                        score.mistakes.map((card) => [card.id, card]),
+                      ).values(),
+                    ];
+                    return createRound(
+                      [nextPracticeCard(mistakes)],
+                      mistakes,
+                      false,
+                    );
+                  })(),
                 })
               }
               onRepeat={() =>
                 dispatch({
                   type: 'restart',
-                  round: createRound(round.original),
+                  round: createRound(
+                    [nextPracticeCard(cards, [], progress)],
+                    cards,
+                    false,
+                  ),
                 })
               }
             />
@@ -385,7 +435,9 @@ export function StudySession({
                         : saveStatus === 'error'
                           ? t.reviewSaveError
                           : saveStatus === 'saved'
-                            ? t.reviewSaved
+                            ? practiceOnly
+                              ? t.practiceCounted
+                              : t.reviewSaved
                             : ''}
                     </Text>
                     {saveStatus === 'error' ? (
@@ -414,9 +466,7 @@ export function StudySession({
                     testID="study-action"
                     primary={saveStatus !== 'error'}
                     disabled={!!onCommitReview && saveStatus !== 'saved'}
-                    label={
-                      round.index === round.deck.length - 1 ? t.results : t.next
-                    }
+                    label={t.next}
                     onPress={advance}
                   />
                 ) : (
