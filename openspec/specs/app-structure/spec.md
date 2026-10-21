@@ -24,7 +24,7 @@ Application code SHALL live under `src/`. Routes and navigators SHALL live in `s
 
 ### Requirement: Expo Router owns application startup
 
-The application SHALL start through `expo-router/entry`, resolve `/` to `src/app/index.tsx`, and manage its root navigation in `src/app/_layout.tsx`. The app SHALL use the `kana-app` URL scheme and enable typed routes. Internal source imports SHALL support the `@/*` alias mapped to `src/*`.
+The application SHALL start through `expo-router/entry`, resolve `/` to `src/app/(tabs)/index.tsx`, and manage its root navigation in `src/app/_layout.tsx`. Main destinations SHALL be grouped in `src/app/(tabs)/` with their navigator in `_layout.tsx`; study SHALL remain outside the tab group. The app SHALL use the `kana-app` URL scheme and enable typed routes. Internal source imports SHALL support the `@/*` alias mapped to `src/*`.
 
 #### Scenario: Opening the home route
 
@@ -39,12 +39,14 @@ The application SHALL start through `expo-router/entry`, resolve `/` to `src/app
 
 ### Requirement: Tailwind styles work across platforms
 
-The application SHALL support Tailwind CSS 4 classes on React Native components through Uniwind on iOS, Android, and web. `src/global.css` SHALL be the single entry for Tailwind imports and shared design tokens, imported by the root layout. The initial screen SHALL use utility classes for layout and typography and semantic background/foreground colors.
+The application SHALL support Tailwind CSS 4 classes on React Native components through Uniwind on iOS, Android, and web. `src/global.css` SHALL be the single entry for Tailwind imports and shared design tokens, imported by the root layout. The home and study screens SHALL use utility classes for layout and typography and semantic colors for backgrounds, foregrounds, selection, and feedback.
 
-#### Scenario: Rendering the initial screen
+#### Scenario: Rendering the home screen
 
-- **WHEN** the initial screen renders
-- **THEN** its content is centered with padding, a warm light background, and readable foreground text
+- **WHEN** the home screen renders
+- **THEN** it presents a responsive learning dashboard with consistent gutters, a warm cream background and dark readable foreground text in light mode (or corresponding semantic dark-mode colors), and restrained primary accents
+- **AND** its content can scroll as needed on small screens instead of requiring a centered placeholder layout
+- **AND** a resume-study panel, alphabet coverage, and due-review access establish the visual hierarchy
 - **AND** these styles come from Tailwind utilities and the shared CSS tokens
 
 #### Scenario: Checking types before starting Metro
