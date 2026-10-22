@@ -92,7 +92,7 @@ export function StudySession({
       ? t.revealed
       : t.incorrect;
   const feedback = grade
-    ? `${gradeLabel}.${grade.correct || round.readingVisible ? ` ${t.reading(card.kana, card.reading)}` : ''}${!grade.correct && grade.answer !== null ? ` ${t.yourAnswer(grade.answer)}` : ''}`
+    ? `${gradeLabel}. ${t.reading(card.kana, card.reading)}${!grade.correct && grade.answer !== null ? ` ${t.yourAnswer(grade.answer)}` : ''}`
     : round.needsAnswer
       ? t.needsAnswer
       : '';
@@ -114,7 +114,6 @@ export function StudySession({
   const advance = useCallback(() => {
     if (
       !grade ||
-      (!grade.correct && !round.readingVisible) ||
       currentRound.current.grades[currentRound.current.index] !== grade ||
       (onCommitReview && saveStatus !== 'saved')
     )
@@ -132,7 +131,6 @@ export function StudySession({
     input.current?.focus();
   }, [
     grade,
-    round.readingVisible,
     round.original,
     round.grades,
     progress,
@@ -361,8 +359,6 @@ export function StudySession({
                         return;
                       if (!grade) answer({ type: 'submit', cardId: card.id });
                       else if (saveStatus === 'error') void saveReview();
-                      else if (!grade.correct && !round.readingVisible)
-                        dispatch({ type: 'reveal', cardId: card.id });
                       else advance();
                     }}
                     autoCapitalize="none"
@@ -416,7 +412,7 @@ export function StudySession({
                   message={
                     !grade
                       ? feedback
-                      : `${grade.correct || round.readingVisible ? `${gradeLabel} · ${card.reading}` : gradeLabel}${!grade.correct && grade.answer !== null ? `\n${t.yourAnswer(grade.answer)}` : ''}`
+                      : `${gradeLabel} · ${card.reading}${!grade.correct && grade.answer !== null ? `\n${t.yourAnswer(grade.answer)}` : ''}`
                   }
                 />
                 {onCommitReview ? (
@@ -451,17 +447,7 @@ export function StudySession({
                     ) : null}
                   </View>
                 ) : null}
-                {grade && !grade.correct && !round.readingVisible ? (
-                  <Action
-                    testID="study-action"
-                    primary={saveStatus !== 'error'}
-                    label={t.showReading}
-                    onPress={() => {
-                      dispatch({ type: 'reveal', cardId: card.id });
-                      input.current?.focus();
-                    }}
-                  />
-                ) : grade ? (
+                {grade ? (
                   <Action
                     key="next"
                     testID="study-action"

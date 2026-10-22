@@ -103,7 +103,6 @@ export type Round = {
   grades: Grade[];
   input: string;
   nextInput: boolean;
-  readingVisible: boolean;
   needsAnswer: boolean;
   finished: boolean;
 };
@@ -120,7 +119,6 @@ export function createRound(
     grades: [],
     input: '',
     nextInput: false,
-    readingVisible: false,
     needsAnswer: false,
     finished: false,
   };
@@ -163,11 +161,7 @@ export function studyReducer(round: Round, action: StudyAction): Round {
   const graded = round.grades.length > round.index;
 
   if (action.type === 'next') {
-    if (
-      !graded ||
-      (!round.grades[round.index].correct && !round.readingVisible)
-    )
-      return round;
+    if (!graded) return round;
     if (action.nextCard) {
       if (!round.original.some((card) => card.id === action.nextCard!.id))
         return round;
@@ -184,7 +178,6 @@ export function studyReducer(round: Round, action: StudyAction): Round {
       input:
         round.grades[round.index].correct && round.nextInput ? round.input : '',
       nextInput: false,
-      readingVisible: false,
       needsAnswer: false,
     };
   }
@@ -203,10 +196,7 @@ export function studyReducer(round: Round, action: StudyAction): Round {
     round = { ...round, input: action.value, needsAnswer: false };
     if (!acceptsAnswer(card, action.value)) return round;
   }
-  if (graded)
-    return action.type === 'reveal' && !round.readingVisible
-      ? { ...round, readingVisible: true }
-      : round;
+  if (graded) return round;
   if (action.type === 'submit' && !round.input.trim())
     return { ...round, needsAnswer: true };
 
@@ -214,7 +204,6 @@ export function studyReducer(round: Round, action: StudyAction): Round {
   return {
     ...round,
     input: action.type === 'reveal' ? '' : round.input,
-    readingVisible: action.type === 'reveal',
     needsAnswer: false,
     grades: [
       ...round.grades,

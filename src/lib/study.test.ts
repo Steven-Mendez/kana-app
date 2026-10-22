@@ -180,7 +180,7 @@ test('every canonical reading and alias auto-grades as a whole normalized input'
   }
 });
 
-test('confirmed errors cannot advance until their reading is revealed and never change rating', () => {
+test('confirmed errors can continue at once and never change rating', () => {
   const card = cards[0];
   let round = studyReducer(createRound([card]), {
     type: 'input',
@@ -189,16 +189,14 @@ test('confirmed errors cannot advance until their reading is revealed and never 
   });
   round = studyReducer(round, { type: 'submit', cardId: card.id });
   const grade = round.grades[0];
-  assert.equal(round.readingVisible, false);
   assert.equal(round.input, 'wrong');
-  assert.equal(studyReducer(round, { type: 'next', cardId: card.id }), round);
   round = studyReducer(round, {
     type: 'input',
     cardId: card.id,
     value: card.reading,
   });
-  round = studyReducer(round, { type: 'reveal', cardId: card.id });
-  assert.equal(round.readingVisible, true);
+  for (const type of ['reveal', 'submit'] as const)
+    assert.equal(studyReducer(round, { type, cardId: card.id }), round);
   assert.equal(round.grades[0], grade);
   assert.equal(grade.correct, false);
   assert.equal(

@@ -130,7 +130,7 @@ The following aliases SHALL be accepted for both alphabets; unlisted cards SHALL
 
 ### Requirement: Feedback resolves each card exactly once
 
-A correct input match or submission SHALL show correct feedback and the canonical reading, then advance automatically after brief feedback. Explicitly submitting an incorrect draft SHALL show incorrect feedback and the submitted answer, retain the input, and add the card to the round's mistakes, WITHOUT exposing the canonical reading in visible text or accessibility output. The next Enter or Show reading action SHALL reveal the canonical reading without grading again. A subsequent Enter or Next SHALL continue; practice SHALL continue until the learner chooses Finish practice. Explicit Reveal answer on an ungraded card SHALL show the canonical reading immediately and count the card as incorrect, including when the input is empty. Correct feedback SHALL also permit immediate continuation.
+A correct input match or submission SHALL show correct feedback and the canonical reading, then advance automatically after brief feedback. Explicitly submitting an incorrect draft SHALL immediately show incorrect feedback, the canonical reading and the submitted answer in visible text and accessibility output, retain the input, and add the card to the round's mistakes. Incorrect answers SHALL NOT require a separate Show reading step and SHALL NOT advance automatically: the next Enter or Next SHALL continue; practice SHALL continue until the learner chooses Finish practice. Explicit Reveal answer on an ungraded card SHALL show the canonical reading immediately and count the card as incorrect, including when the input is empty. Correct feedback SHALL also permit immediate continuation.
 
 Once graded or revealed, a card SHALL NOT accept further grading or change its result. Repeated taps, stale callbacks, timers, or keyboard events SHALL NOT score it twice or skip the next ungraded card. The immutable grade SHALL preserve the submitted answer. During correct feedback, appended characters that extend the current answer to another accepted alias (such as n to nn) SHALL stay with the current prompt; otherwise only newly entered text SHALL carry to the next card and interrupt the pause once advancement is allowed. Wrong/revealed drafts SHALL clear on continuation. Feedback SHALL use text or symbols as well as color.
 
@@ -143,9 +143,9 @@ Once graded or revealed, a card SHALL NOT accept further grading or change its r
 #### Scenario: Incorrect or revealed answer
 
 - **WHEN** the learner submits `ka` for う
-- **THEN** incorrect feedback and `ka` are shown, `u` remains hidden, answered increases by one, and correct does not increase
-- **AND** a second Enter or Show reading reveals `u` without another grade
-- **AND** a third Enter or Next continues, with う included once in the round's mistakes
+- **THEN** incorrect feedback, the reading `u` and the submitted `ka` are shown and announced together, answered increases by one, and correct does not increase
+- **AND** the prompt stays on う until a second Enter or Next continues, with う included once in the round's mistakes
+- **AND** no Show reading action is offered
 
 #### Scenario: Correct a draft before confirming an error
 
@@ -249,7 +249,7 @@ The interface SHALL use a readable sans-serif hierarchy, Japanese-capable glyph 
 
 Selection SHALL present an alphabet selector with per-alphabet counts, a category selector for the three catalog sections, alphabet-scoped bulk actions, and a vertically scrolling table of families in the chosen category. Practice and Syllabary SHALL share the same circular kana cell component, kana/rōmaji typography, surface colors and compact cell sizing. Practice and Syllabary SHALL use one shared catalog control layout with matching top padding, glyph-led alphabet controls featuring あ and ア, category capsules and vowel headers. At the same viewport, font size and initial scroll position, alphabet and category bounds SHALL align between screens. Practice selection counts SHALL be compact secondary badges that do not change control height. Neither screen SHALL insert introductory copy before the controls. Enlarged-text layouts SHALL use the same stacking rules. The grid SHALL contain individually selectable kana/rōmaji cells with explicit selected checks and SHALL NOT add family-name headings absent from Syllabary. Practice SHALL show a separate checkbox beside each row for one-touch family selection, with unchecked, mixed and checked states. These controls SHALL have at least 44 logical pixels of touch area and SHALL NOT introduce family-name headings. Individual cells SHALL remain independent controls, including in partially selected rows. Vowel headers SHALL align with their cells. Controls SHALL have touch targets of at least 44 logical pixels. Basic/voiced cells SHALL preserve A/I/U/E/O alignment and empty YA/WA positions at normal text sizes; yōon SHALL use A/U/O. Enlarged text SHALL reflow without clipping. Switching category SHALL preserve all selections. The initial category SHALL be basic kana. The combined count, a scheduled/free practice mode selector, and one Start study button SHALL occupy a compact bottom action area that does not cover the table. Scheduled review SHALL be the default mode; the selected mode SHALL be explicit and its purpose briefly explained. A zero-card selection SHALL disable Start study. On desktop web at 1024 logical pixels and wider, both catalogs SHALL use compact alphabet/category controls, a centered content width no greater than 1024 logical pixels, and two side-by-side blocks for categories with at least six families. Kana cells SHALL retain equal width and height with a maximum desktop diameter of 64 logical pixels. Native and narrow-web catalog layouts SHALL retain their mobile structure; phone side gutters SHALL be at least 16 logical pixels.
 
-Study SHALL prioritize a large central kana prompt with a subordinate alphabet label. A compact header SHALL contain an accessible Change selection close action, cumulative answered count, correct count, and an explicit Finish practice action. The underlined rōmaji input, feedback, and current action SHALL form a bottom answer area reachable with the software keyboard. The input placeholder SHALL NOT disclose the answer. Results SHALL use a concise summary, actual round score, best consecutive-correct streak for this round, and a plain mistakes list with submitted-answer corrections. A compact current consecutive-correct count MAY appear alongside cumulative answered count during typing. Review mistakes SHALL be primary when available and Repeat selection primary otherwise; scheduled rounds SHALL return to selection.
+Study SHALL prioritize a large central kana prompt with a subordinate alphabet label. A compact header SHALL contain an accessible Change selection close action, one summary line with the cumulative answered and correct counts in the muted text color, and an explicit Finish practice action. The underlined rōmaji input, feedback, and current action SHALL form a bottom answer area reachable with the software keyboard. The input placeholder SHALL NOT disclose the answer. Results SHALL use a concise summary, actual round score, best consecutive-correct streak for this round, and a plain mistakes list with submitted-answer corrections. The current consecutive-correct streak SHALL join that summary line only while it is at least two. Review mistakes SHALL be primary when available and Repeat selection primary otherwise; scheduled rounds SHALL return to selection.
 
 The study input SHALL be no wider than 192 logical pixels. Answer actions SHALL remain compact; an icon-only Check action SHALL expose the same accessible label as the text action. The unanswered state SHALL avoid repeated instructional copy beneath the input; whitespace and the kana SHALL dominate the composition. The transient-round explanation SHALL remain a short footer sentence. Content SHALL scroll when screen height or enlarged text requires it.
 
@@ -285,6 +285,12 @@ The study surface SHALL NOT add guided-path navigation, lesson locks, daily or h
 - **WHEN** the software keyboard opens
 - **THEN** the input and answer action remain reachable, the prompt stays readable, and explicit submission still grades only once
 - **AND** feedback and Next and Finish practice stay reachable after grading
+
+#### Scenario: Compact study header
+
+- **WHEN** a learner has answered three prompts with two correct and a current streak of one
+- **THEN** the header shows one muted summary such as `3 answered · 2 correct` between the close and Finish practice actions
+- **AND** the streak appears in the same line only after two consecutive correct answers
 
 #### Scenario: Simplified results
 
@@ -325,8 +331,8 @@ At normal system text sizes on portrait phones, the complete answer input, gradi
 #### Scenario: Correct a mistake with the software keyboard open
 
 - **WHEN** a learner submits an incorrect answer on a portrait phone at normal text size
-- **THEN** the entire input, incorrect feedback, submitted answer, and Show reading button are visible above the keyboard without scrolling
-- **AND** revealing the reading leaves the complete correction and Next and Finish practice button visible together
+- **THEN** the entire input, incorrect feedback, canonical reading, submitted answer, and Next button are visible above the keyboard without scrolling
+- **AND** Finish practice remains visible in the header
 - **AND** the prompt shrinks to leave room for feedback instead of clipping the button
 
 #### Scenario: Enlarged text and reduced height
@@ -339,7 +345,7 @@ At normal system text sizes on portrait phones, the complete answer input, gradi
 
 - **WHEN** a learner selects a family or submits an answer using a screen reader or hardware keyboard
 - **THEN** selection states, grading feedback, and progress are accessible
-- **AND** correct input matches advance automatically, while Enter confirms a wrong draft, reveals its reading, then continues in separate steps
+- **AND** correct input matches advance automatically, while Enter confirms a wrong draft and shows its reading, then a second Enter continues
 
 #### Scenario: Consecutive answers
 
@@ -348,9 +354,9 @@ At normal system text sizes on portrait phones, the complete answer input, gradi
 
 ### Requirement: Mobile typing feedback is stable and explicit
 
-The typing prompt SHALL remain cardless and use the existing semantic color system. Correct grades SHALL color the kana and input underline with success; incorrect or revealed grades SHALL use error, accompanied by textual feedback. Input and feedback SHALL remain in a centered column. At normal text sizes, grading SHALL NOT horizontally move the input or move the prompt merely because feedback appears: the submit footprint and two feedback lines SHALL be reserved. Long answers and enlarged text MAY grow the feedback region with scroll access rather than truncating the answer.
+The typing prompt SHALL remain cardless and use the existing semantic color system. Correct grades SHALL color the kana and input underline with success; incorrect or revealed grades SHALL use error, accompanied by textual feedback. A feedback status symbol SHALL align with the first line of its text. Input and feedback SHALL remain in a centered column. At normal text sizes, grading SHALL NOT horizontally move the input or move the prompt merely because feedback appears: the submit footprint and two feedback lines SHALL be reserved. Long answers and enlarged text MAY grow the feedback region with scroll access rather than truncating the answer.
 
-The existing input SHALL remain mounted and focused across prompt changes. Correct matches SHALL continue to advance automatically; wrong drafts SHALL remain editable until submitted, and confirmed mistakes SHALL retain the show-reading acknowledgement step. Scheduled reviews SHALL retain exactly-once commits and failure/retry gating.
+The existing input SHALL remain mounted and focused across prompt changes. Correct matches SHALL continue to advance automatically; wrong drafts SHALL remain editable until submitted, and confirmed mistakes SHALL show their reading immediately and wait for Enter or Next before continuing. Scheduled reviews SHALL retain exactly-once commits and failure/retry gating.
 
 #### Scenario: Type continuously with the keyboard open
 
@@ -358,10 +364,11 @@ The existing input SHALL remain mounted and focused across prompt changes. Corre
 - **THEN** the same input stays focused and centered, feedback uses success, and the next prompt appears without another tap
 - **AND** input, feedback, and current action remain above the keyboard at standard text sizes
 
-#### Scenario: Confirm and reveal a mistake
+#### Scenario: Confirm a mistake
 
-- **WHEN** a learner submits an incorrect draft, then chooses Show reading
-- **THEN** error feedback first hides and then reveals the canonical reading without moving the input horizontally or grading again
+- **WHEN** a learner submits an incorrect draft
+- **THEN** error feedback shows the canonical reading and the submitted answer at once without moving the input horizontally
+- **AND** Enter or Next continues without grading again
 - **AND** the feedback region preserves two lines of space between prompts and expands accessibly when needed
 
 ### Requirement: Typing results explain this round
