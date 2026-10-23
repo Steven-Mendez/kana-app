@@ -1,25 +1,26 @@
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
+
+import { ScreenTitle } from '@/components/game/comic';
 
 export function PageHeading({
   title,
   description,
 }: {
   title: string;
-  description: string;
+  /** Optional; omit it on screens that need no tagline. */
+  description?: string;
 }) {
+  // Phones show the title in the app bar next to the logo.
+  const { width } = useWindowDimensions();
+  if (width < 768 && !description) return null;
   return (
     <View className="gap-2">
-      {process.env.EXPO_OS === 'web' ? (
-        <Text
-          accessibilityRole="header"
-          className="text-3xl font-bold tracking-tight text-foreground"
-        >
-          {title}
+      {width >= 768 ? <ScreenTitle>{title}</ScreenTitle> : null}
+      {description ? (
+        <Text className="font-ui text-sm leading-6 text-muted-foreground">
+          {description}
         </Text>
       ) : null}
-      <Text className="text-sm leading-6 text-muted-foreground">
-        {description}
-      </Text>
     </View>
   );
 }

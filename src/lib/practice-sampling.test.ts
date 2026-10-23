@@ -1,18 +1,13 @@
 import { expect, test } from '@jest/globals';
-import { Rating } from 'ts-fsrs';
 
 import { cards } from '@/data/kana';
 import { nextPracticeCard, practiceWeight } from '@/lib/practice-sampling';
-import {
-  initializeCard,
-  scheduleReview,
-  shouldSchedulePractice,
-} from '@/lib/spaced-repetition';
 import { createRound, roundScore, studyReducer, type Grade } from '@/lib/study';
+import { progressAfter } from '@/lib/test-progress';
 
-const now = new Date('2026-10-21T12:00:00Z');
+const now = new Date(2026, 9, 21, 12);
 const pool = cards.slice(0, 4);
-const good = scheduleReview(initializeCard(now), Rating.Good, now).card;
+const good = progressAfter(new Date(2026, 9, 21, 9));
 const grade = (index: number, correct: boolean): Grade => ({
   attempt: index,
   card: pool[index],
@@ -41,33 +36,28 @@ test('the first prompt is randomized across the entire pool in both modes, inclu
   }
 });
 
-test('difficulty, elapsed time relative to stability, and due status independently raise priority', () => {
-  expect(practiceWeight({ ...good, difficulty: 10 }, now)).toBeGreaterThan(
-    practiceWeight({ ...good, difficulty: 1 }, now),
+test("low mastery, due status and unseen kana raise priority; today's cap lowers it", () => {
+  const strong = { ...good, level: 80 };
+  expect(practiceWeight(good, now)).toBeGreaterThan(
+    practiceWeight(strong, now),
   );
-  expect(
-    practiceWeight({ ...good, last_review: new Date('2026-10-01') }, now),
-  ).toBeGreaterThan(practiceWeight(good, now));
   expect(practiceWeight({ ...good, due: now }, now)).toBeGreaterThan(
     practiceWeight(good, now),
   );
-  const old = { ...good, last_review: new Date('2026-10-20') };
-  expect(practiceWeight({ ...old, stability: 0.5 }, now)).toBeGreaterThan(
-    practiceWeight({ ...old, stability: 10 }, now),
+  expect(practiceWeight(undefined, now)).toBe(3);
+  const capped = progressAfter(now, true, true, true, true);
+  expect(capped.level).toBe(20);
+  expect(practiceWeight(capped, now)).toBeLessThan(
+    practiceWeight({ ...capped, gainedToday: 15 }, now),
   );
+  expect(practiceWeight({ ...good, level: 100 }, now)).toBe(1);
 });
 
-test('weighted sampling actually shows difficult neglected cards more often while preserving every identity', () => {
-  const weak = {
-    ...good,
-    difficulty: 10,
-    stability: 0.1,
-    last_review: new Date('2026-09-01'),
-    due: new Date('2026-09-02'),
-  };
+test('weighted sampling shows weak due kana more often while preserving every identity', () => {
+  const weak = { ...good, level: 0, due: new Date(2026, 9, 20) };
   const progress = new Map([
     [pool[0].id, weak],
-    [pool[1].id, good],
+    [pool[1].id, { ...good, level: 100 }],
   ]);
   const picks = Array.from(
     { length: 1000 },
@@ -134,16 +124,4 @@ test('no adjacent repeats with alternatives; single kana keeps going and only ex
     expect(round.grades).toHaveLength(40);
     expect(roundScore(round).accuracy).toBe(100);
   }
-});
-
-test('FSRS eligibility keeps new/due reviews and early failures, but skips extra successes before due', () => {
-  expect(shouldSchedulePractice(undefined, Rating.Good, now)).toBe(true);
-  expect(shouldSchedulePractice(initializeCard(now), Rating.Good, now)).toBe(
-    true,
-  );
-  for (const rating of [Rating.Hard, Rating.Good, Rating.Easy] as const) {
-    expect(shouldSchedulePractice(good, rating, now)).toBe(false);
-    expect(shouldSchedulePractice(good, rating, good.due)).toBe(true);
-  }
-  expect(shouldSchedulePractice(good, Rating.Again, now)).toBe(true);
 });

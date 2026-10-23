@@ -5,18 +5,25 @@ import {
   render,
   screen,
   userEvent,
+  within,
 } from '@testing-library/react-native';
-import { Rating } from 'ts-fsrs';
 import { AccessibilityInfo } from 'react-native';
 
 import { ScheduledStudy } from '@/components/scheduled-study';
 import { StudySession } from '@/components/study-session';
 import { cards } from '@/data/kana';
 import { copy } from '@/lib/copy';
-import { createReviewStorage, type ReviewRequest } from '@/lib/review-storage';
+import {
+  algorithm,
+  replayEvents,
+  type LearningEvent,
+} from '@/lib/learning-domain';
+import type { ReviewRequest } from '@/lib/review-storage';
 import { reviews } from '@/lib/reviews';
 import { answerHaptic } from '@/lib/haptics';
-import { initializeCard, scheduleReview } from '@/lib/spaced-repetition';
+import { answerSound } from '@/lib/sounds';
+import { hydrateProgress } from '@/lib/kana-mastery';
+import { progressAfter } from '@/lib/test-progress';
 
 jest.mock('expo-crypto', () => ({
   randomUUID: () =>
@@ -41,12 +48,23 @@ jest.mock('@/lib/learning-provider', () => ({
   useLearning: () => ({
     reviews:
       jest.requireMock<typeof import('@/lib/reviews')>('@/lib/reviews').reviews,
+    document: { events: [], generation: 0 },
   }),
 }));
 jest.mock('@/lib/reviews', () => ({
   reviews: { load: jest.fn(), commit: jest.fn() },
 }));
-jest.mock('@/lib/haptics', () => ({ answerHaptic: jest.fn() }));
+jest.mock('@/lib/sounds', () => ({
+  answerSound: jest.fn(),
+  playSound: jest.fn(),
+  prepareSounds: jest.fn(),
+}));
+jest.mock('@/lib/haptics', () => ({
+  answerHaptic: jest.fn(),
+  pressHaptic: jest.fn(),
+  celebrateHaptic: jest.fn(),
+  selectHaptic: jest.fn(),
+}));
 
 const now = new Date('2026-03-08T06:55:00.000Z');
 const t = copy.en;
@@ -94,7 +112,7 @@ test('correct typing commits once, blocks advancement while saving, then advance
   expect(commit).toHaveBeenCalledWith(
     expect.objectContaining({
       cardId: deck[0].id,
-      rating: Rating.Good,
+      rating: 3,
       reviewedAt: now,
     }),
   );
@@ -127,9 +145,7 @@ test('a wrong draft can be erased and corrected without Enter or an incorrect gr
     expect(commit).not.toHaveBeenCalled();
   }
   await fireEvent.changeText(input, 'e');
-  expect(commit).toHaveBeenCalledWith(
-    expect.objectContaining({ rating: Rating.Good }),
-  );
+  expect(commit).toHaveBeenCalledWith(expect.objectContaining({ rating: 3 }));
   await advanceFeedback();
   expect(screen.queryByText(t.scheduledComplete)).not.toBeOnTheScreen();
   await finishPractice();
@@ -215,9 +231,7 @@ test.each(['wrong', 'reveal'] as const)(
       await user.type(screen.getByPlaceholderText('Rōmaji'), 'wrong');
       await user.press(screen.getByRole('button', { name: t.check }));
     } else await user.press(screen.getByRole('button', { name: t.reveal }));
-    expect(commit).toHaveBeenCalledWith(
-      expect.objectContaining({ rating: Rating.Again }),
-    );
+    expect(commit).toHaveBeenCalledWith(expect.objectContaining({ rating: 1 }));
     expect(screen.getByText(t.reviewSaved)).toBeOnTheScreen();
     await advanceFeedback();
     expect(screen.queryByText(t.scheduledComplete)).not.toBeOnTheScreen();
@@ -250,9 +264,10 @@ test('a failed save retries the original rating, identity, and timestamp', async
   await user.press(screen.getByRole('button', { name: t.reveal }));
   expect(await screen.findByRole('alert')).toHaveTextContent(t.reviewSaveError);
   expect(screen.getByTestId('finish-study')).toBeDisabled();
-  expect(screen.getByRole('button', { name: t.next })).toBeDisabled();
+  // Retry takes the place of Next until the review is saved.
+  expect(screen.queryByRole('button', { name: t.next })).toBeNull();
   jest.setSystemTime(new Date('2026-03-09T06:55:00.000Z'));
-  await user.press(screen.getByRole('button', { name: t.retry }));
+  await user.press(screen.getByTestId('study-retry'));
   expect(commit).toHaveBeenCalledTimes(2);
   expect(commit.mock.calls[1][0]).toEqual(commit.mock.calls[0][0]);
   expect(screen.getByRole('button', { name: t.next })).toBeEnabled();
@@ -359,7 +374,7 @@ test.each(['wrong', 'reveal'] as const)(
       await fireEvent.press(screen.getByRole('button', { name: t.reveal }));
     await fireEvent.changeText(input, 'discard');
     await act(async () => jest.advanceTimersByTime(5000));
-    expect(screen.getByTestId('study-prompt')).toHaveTextContent('あ');
+    expect(screen.getByTestId('study-prompt')).toHaveTextContent(/^あ/);
     expect(screen.getByTestId('answer-feedback')).toHaveTextContent(
       answer === 'wrong'
         ? `${t.incorrect} · a${t.yourAnswer('wrong')}`
@@ -401,7 +416,7 @@ test('slow saving and keyboard retry retain the review and buffered next answer'
   await enter();
   await act(async () => jest.advanceTimersByTime(5000));
   expect(commit).toHaveBeenCalledTimes(1);
-  expect(screen.getByTestId('study-prompt')).toHaveTextContent('あ');
+  expect(screen.getByTestId('study-prompt')).toHaveTextContent(/^あ/);
   expect(input).toHaveDisplayValue('i');
   await act(async () => fail(new Error('disk full')));
   expect(screen.getByRole('alert')).toHaveTextContent(t.reviewSaveError);
@@ -489,7 +504,7 @@ test('unmount cancels automatic progression and late save completion', async () 
 
 test('scheduled loading exposes a retryable error, next-due time, and refreshes when due', async () => {
   const user = userEvent.setup();
-  const saved = scheduleReview(initializeCard(now), Rating.Good, now).card;
+  const saved = progressAfter(now);
   jest
     .mocked(reviews.load)
     .mockRejectedValueOnce(new Error('unavailable'))
@@ -531,9 +546,14 @@ test('typing summary retains original mistakes and resets session streak when re
   await enter();
   await finishPractice();
   expect(screen.getByLabelText(`${t.bestStreak}: 1`)).toBeOnTheScreen();
-  expect(screen.getByText(t.yourAnswer('wrong'))).toBeOnTheScreen();
-  expect(screen.queryByText(t.yourAnswer('edited'))).not.toBeOnTheScreen();
-  expect(screen.getByText(t.revealedShort)).toBeOnTheScreen();
+  // Corrections carry a status mark before the submitted answer.
+  expect(
+    screen.getByText(t.yourAnswer('wrong'), { exact: false }),
+  ).toBeOnTheScreen();
+  expect(
+    screen.queryByText(t.yourAnswer('edited'), { exact: false }),
+  ).not.toBeOnTheScreen();
+  expect(screen.getByText(t.revealedShort, { exact: false })).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: t.review }));
   expect(screen.queryByTestId('study-streak')).not.toBeOnTheScreen();
   expect(screen.getByTestId('romaji-input')).toHaveDisplayValue('');
@@ -570,6 +590,24 @@ test('each new grade triggers exactly one matching haptic', async () => {
   expect(haptic.mock.calls).toEqual([[true], [false]]);
 });
 
+test('each new grade plays exactly one sound with the combo it reached', async () => {
+  const sound = jest.mocked(answerSound);
+  sound.mockClear();
+  await render(<StudySession cards={deck} />);
+  const input = screen.getByTestId('romaji-input');
+  await fireEvent.changeText(input, 'a');
+  await fireEvent.changeText(input, 'a');
+  expect(sound.mock.calls).toEqual([[true, 1]]);
+  await advanceFeedback();
+  await fireEvent.changeText(input, 'wrong');
+  await enter();
+  await fireEvent.press(screen.getByRole('button', { name: t.next }));
+  expect(sound.mock.calls).toEqual([
+    [true, 1],
+    [false, 0],
+  ]);
+});
+
 test('finishing excludes an unfinished draft and does not commit it', async () => {
   const commit = jest.fn(async (_request: ReviewRequest) => {});
   await render(<StudySession cards={deck} onCommitReview={commit} />);
@@ -600,46 +638,104 @@ test('a repeated character creates a fresh review and stale handlers cannot grad
   expect(screen.getByText(t.totals(8, 0))).toBeOnTheScreen();
 });
 
-test('smart practice accepts future-due kana without inflating FSRS, but saves a subsequent mistake', async () => {
-  const data = new Map<string, string>();
-  const store = createReviewStorage({
-    multiRemove: async (keys) => {
-      for (const key of keys) data.delete(key);
-    },
-    removeItem: async (key) => {
-      data.delete(key);
-    },
-    getItem: async (key) => data.get(key) ?? null,
-    setItem: async (key, value) => {
-      data.set(key, value);
-    },
-  });
-  for (const card of deck)
-    await store.commit({
-      id: `seed:${card.id}`,
-      cardId: card.id,
-      rating: Rating.Good,
-      reviewedAt: now,
-    });
-  const progress = await store.load(deck.map((card) => card.id));
-  expect([...progress.values()].every((card) => card.due > now)).toBe(true);
+test('smart practice saves every answer and reports the level, capped for the day', async () => {
+  const events: LearningEvent[] = deck.map((card) => ({
+    id: `seed:${card.id}`,
+    cardId: card.id,
+    rating: 3,
+    reviewedAt: now.toISOString(),
+    deviceId: 'device',
+    algorithm,
+  }));
+  const progress = new Map(
+    deck.map((card) => [
+      card.id,
+      hydrateProgress(replayEvents(card.id, events).mastery),
+    ]),
+  );
   jest.mocked(reviews.load).mockResolvedValueOnce(progress);
-  jest.mocked(reviews.commit).mockImplementation(store.commit);
+  jest.mocked(reviews.commit).mockImplementation(async (request) => {
+    events.push({
+      id: request.id,
+      cardId: request.cardId,
+      rating: request.rating,
+      reviewedAt: request.reviewedAt.toISOString(),
+      deviceId: 'device',
+      algorithm,
+    });
+    return replayEvents(request.cardId, events);
+  });
   await render(<ScheduledStudy cards={deck} />);
   const input = await screen.findByTestId('romaji-input');
-  for (let index = 0; index < 6; index++) {
+  await fireEvent.changeText(input, deck[0].reading);
+  expect(await screen.findByText(t.masteryLevel('あ', 10))).toBeOnTheScreen();
+  await advanceFeedback();
+  for (let index = 1; index < 6; index++) {
     await fireEvent.changeText(input, deck[index % 2].reading);
+    if (index === 5)
+      expect(
+        await screen.findByText(t.masteryCapped('い', 20)),
+      ).toBeOnTheScreen();
     await advanceFeedback();
-    expect(screen.queryByText(t.completed)).not.toBeOnTheScreen();
   }
-  expect(reviews.commit).not.toHaveBeenCalled();
-  expect([...progress.values()].map((card) => card.reps)).toEqual([1, 1]);
+  expect(reviews.commit).toHaveBeenCalledTimes(6);
+  expect(progress.get(deck[0].id)?.level).toBe(20);
+  expect(progress.get(deck[1].id)?.level).toBe(20);
   await fireEvent.press(screen.getByRole('button', { name: t.reveal }));
-  expect(reviews.commit).toHaveBeenCalledTimes(1);
-  expect([...progress.values()].map((card) => card.reps)).toEqual([2, 1]);
-  expect(
-    (await store.load(deck.map((card) => card.id))).get(deck[0].id)?.reps,
-  ).toBe(2);
+  expect(reviews.commit).toHaveBeenCalledTimes(7);
+  expect(progress.get(deck[0].id)?.level).toBe(10);
   await finishPractice();
   expect(screen.getByText(t.totals(6, 1))).toBeOnTheScreen();
+});
+
+test('endless rounds keep the close action and summary but show no progress bar', async () => {
+  const endless = await render(<StudySession cards={deck} />);
+  expect(screen.getByTestId('close-study')).toBeOnTheScreen();
+  expect(screen.getByTestId('study-summary')).toBeOnTheScreen();
+  expect(screen.queryByLabelText(t.gameProgress)).not.toBeOnTheScreen();
+  await endless.unmount();
+  await render(<StudySession cards={deck} length={5} />);
+  expect(screen.getByTestId('close-study')).toBeOnTheScreen();
+  expect(screen.getByLabelText(t.gameProgress)).toBeOnTheScreen();
+});
+
+test('keyboard actions sit full-width in the bottom answer area', async () => {
+  await render(<StudySession cards={deck} />);
+  const area = screen.getByTestId('study-answer-area');
+  expect(within(area).getByTestId('romaji-input')).toBeOnTheScreen();
+  expect(within(area).getByTestId('check-answer')).toBeOnTheScreen();
+  expect(within(area).getByTestId('study-action')).toHaveAccessibleName(
+    t.reveal,
+  );
+});
+
+test('a failed save in touch mode turns the ribbon button into Retry', async () => {
+  const commit = jest
+    .fn(async (_request: ReviewRequest) => {})
+    .mockRejectedValueOnce(new Error('offline storage'));
+  await render(
+    <StudySession
+      cards={[deck[0]]}
+      inputMode="touch"
+      onCommitReview={commit}
+    />,
+  );
+  await fireEvent.press(screen.getByTestId('study-skip'));
+  expect(await screen.findByRole('alert')).toHaveTextContent(t.reviewSaveError);
+  const ribbon = screen.getByTestId('study-ribbon');
+  expect(
+    within(ribbon).queryByRole('button', { name: t.gameGotIt }),
+  ).not.toBeOnTheScreen();
+  await fireEvent.press(within(ribbon).getByTestId('study-retry'));
+  expect(commit).toHaveBeenCalledTimes(2);
+  expect(commit.mock.calls[1][0]).toEqual(commit.mock.calls[0][0]);
+  expect(screen.getByRole('button', { name: t.gameGotIt })).toBeEnabled();
+  expect(screen.queryByTestId('study-retry')).not.toBeOnTheScreen();
+});
+
+test('scheduled loading shows a card-shaped skeleton', async () => {
+  jest.mocked(reviews.load).mockReturnValueOnce(new Promise(() => {}));
+  await render(<ScheduledStudy cards={[deck[0]]} />);
+  expect(screen.getByRole('progressbar')).toHaveAccessibleName(t.loading);
+  expect(screen.getByTestId('study-skeleton-card')).toBeOnTheScreen();
 });

@@ -49,6 +49,53 @@
     --palette-orange-600: oklch(64.6% 0.222 41.116);
     --palette-white: #fff;
 
+    /* Arcade game palette: bright fills with a darker solid edge each. */
+    --palette-light-primary-lip: #8f1d14;
+    --palette-light-tangerine: #fb9437;
+    --palette-light-tangerine-lip: #b9581a;
+    --palette-light-tangerine-text: #a8480a;
+    --palette-light-tangerine-soft: #ffead3;
+    --palette-light-gold: #f7c747;
+    --palette-light-gold-lip: #b8861b;
+    --palette-light-kitsunebi: #22b8e8;
+    --palette-light-kitsunebi-lip: #137aa3;
+    --palette-light-kitsunebi-soft: #dcf5ff;
+    --palette-light-kitsunebi-text: #0b6a8f;
+    --palette-light-ai: #3a4fbf;
+    --palette-light-ai-soft: #e6e9ff;
+    --palette-light-sumi: #2f2a3d;
+    --palette-light-sumi-lip: #16131f;
+    --palette-light-locked: #e2ddd7;
+    --palette-light-locked-lip: #c9c3bc;
+    --palette-light-on-locked: #7c6e69;
+    --palette-dark-primary-lip: #a8362a;
+    --palette-dark-tangerine: #fc9e47;
+    --palette-dark-tangerine-lip: #b8611f;
+    --palette-dark-tangerine-text: #fda856;
+    --palette-dark-tangerine-soft: #412714;
+    --palette-dark-gold: #f5cc58;
+    --palette-dark-gold-lip: #b88a26;
+    --palette-dark-kitsunebi: #5fdcff;
+    --palette-dark-kitsunebi-lip: #1f8fbf;
+    --palette-dark-kitsunebi-soft: #0f2b38;
+    --palette-dark-kitsunebi-text: #7fe4ff;
+    --palette-dark-ai: #8f9cff;
+    --palette-dark-ai-soft: #22264a;
+    --palette-dark-sumi: #3b3550;
+    --palette-dark-sumi-lip: #1a1626;
+    --palette-dark-locked: #352b2b;
+    --palette-dark-locked-lip: #261c1d;
+    --palette-dark-on-locked: #91827d;
+    --palette-on-sumi: #f3eff8;
+
+    /* Soft ink for informative content; full ink stays for results. */
+    --palette-light-line: oklch(84% 0.022 45);
+    --palette-light-shade: oklch(91% 0.024 50);
+    --palette-dark-line: oklch(42% 0.028 22);
+    /* Dark edges sit lighter than the canvas: elevation, not a black drop. */
+    --palette-dark-shade: oklch(25% 0.02 14);
+    --palette-dark-ink: oklch(36% 0.03 18);
+
     @variant light {
       --color-accent: var(--palette-light-accent);
       --color-accent-foreground: var(--palette-light-accent-foreground);
@@ -88,6 +135,29 @@
       --color-success-fill: var(--palette-emerald-500);
       --color-error: var(--palette-light-destructive);
       --color-warning: var(--palette-amber-600);
+      --color-primary-lip: var(--palette-light-primary-lip);
+      --color-tangerine: var(--palette-light-tangerine);
+      --color-tangerine-lip: var(--palette-light-tangerine-lip);
+      --color-tangerine-text: var(--palette-light-tangerine-text);
+      --color-tangerine-soft: var(--palette-light-tangerine-soft);
+      --color-gold: var(--palette-light-gold);
+      --color-gold-lip: var(--palette-light-gold-lip);
+      --color-on-bright: var(--palette-light-card-foreground);
+      --color-kitsunebi: var(--palette-light-kitsunebi);
+      --color-kitsunebi-lip: var(--palette-light-kitsunebi-lip);
+      --color-kitsunebi-soft: var(--palette-light-kitsunebi-soft);
+      --color-kitsunebi-text: var(--palette-light-kitsunebi-text);
+      --color-ai: var(--palette-light-ai);
+      --color-ai-soft: var(--palette-light-ai-soft);
+      --color-sumi: var(--palette-light-sumi);
+      --color-sumi-lip: var(--palette-light-sumi-lip);
+      --color-on-sumi: var(--palette-on-sumi);
+      --color-locked: var(--palette-light-locked);
+      --color-locked-lip: var(--palette-light-locked-lip);
+      --color-on-locked: var(--palette-light-on-locked);
+      --color-line: var(--palette-light-line);
+      --color-shade: var(--palette-light-shade);
+      --color-ink: var(--palette-light-card-foreground);
     }
 
     @variant dark {
@@ -129,6 +199,40 @@
       --color-success-fill: var(--palette-emerald-500);
       --color-error: var(--palette-dark-destructive);
       --color-warning: var(--palette-amber-400);
+      --color-primary-lip: var(--palette-dark-primary-lip);
+      --color-tangerine: var(--palette-dark-tangerine);
+      --color-tangerine-lip: var(--palette-dark-tangerine-lip);
+      --color-tangerine-text: var(--palette-dark-tangerine-text);
+      --color-tangerine-soft: var(--palette-dark-tangerine-soft);
+      --color-gold: var(--palette-dark-gold);
+      --color-gold-lip: var(--palette-dark-gold-lip);
+      --color-on-bright: var(--palette-dark-primary-foreground);
+      --color-kitsunebi: var(--palette-dark-kitsunebi);
+      --color-kitsunebi-lip: var(--palette-dark-kitsunebi-lip);
+      --color-kitsunebi-soft: var(--palette-dark-kitsunebi-soft);
+      --color-kitsunebi-text: var(--palette-dark-kitsunebi-text);
+      --color-ai: var(--palette-dark-ai);
+      --color-ai-soft: var(--palette-dark-ai-soft);
+      --color-sumi: var(--palette-dark-sumi);
+      --color-sumi-lip: var(--palette-dark-sumi-lip);
+      --color-on-sumi: var(--palette-on-sumi);
+      --color-locked: var(--palette-dark-locked);
+      --color-locked-lip: var(--palette-dark-locked-lip);
+      --color-on-locked: var(--palette-dark-on-locked);
+      --color-line: var(--palette-dark-line);
+      --color-shade: var(--palette-dark-shade);
+      --color-ink: var(--palette-dark-ink);
     }
   }
+}
+
+/* Arcade game shapes and type. Fonts are subset copies loaded by the root
+   layout under these exact names (scripts/subset-game-fonts.mjs). */
+@theme {
+  --radius-tile: 14px;
+  --radius-card: 22px;
+  --font-display: 'DelaGothicOne_400Regular';
+  --font-ui: 'ZenKakuGothicNew_500Medium';
+  --font-ui-bold: 'ZenKakuGothicNew_700Bold';
+  --font-kana: 'ZenMaruGothic_700Bold';
 }

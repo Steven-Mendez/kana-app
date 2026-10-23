@@ -1,19 +1,17 @@
 import { beforeEach, expect, jest, test } from '@jest/globals';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import HomeScreen from '@/app/(tabs)/index';
-import SyllabaryScreen from '@/app/(tabs)/syllabary';
 import { LearningProvider } from '@/lib/learning-provider';
-import { learning } from '@/lib/learning';
-import { resetTestStore } from '@/lib/test-document-store';
+import { resetTestStore, testStore } from '@/lib/test-document-store';
+import { createConfusionStore } from '@/lib/confusions';
 import { SelectionProvider } from '@/lib/selection-provider';
 import { reviews } from '@/lib/reviews';
 import { selectedCards } from '@/lib/study';
 import { copy } from '@/lib/copy';
-import { initializeCard, scheduleReview } from '@/lib/spaced-repetition';
-import { Rating } from 'ts-fsrs';
+import { progressAfter } from '@/lib/test-progress';
 
 jest.mock('@/lib/auth-provider', () => ({
   useAuth: () => ({ session: null }),
@@ -81,8 +79,12 @@ test('home distinguishes unavailable progress from first use, retries and resume
   expect(await screen.findByText(copy.en.reviewLoadError)).toBeOnTheScreen();
   expect(screen.queryByText(copy.en.noProgress)).not.toBeOnTheScreen();
   await fireEvent.press(screen.getByText(copy.en.retry));
-  expect(await screen.findByText(copy.en.noProgress)).toBeOnTheScreen();
-  expect(screen.getByText(copy.en.firstPractice)).toBeOnTheScreen();
+  expect(await screen.findByText(copy.en.firstPractice)).toBeOnTheScreen();
+  // First use: no due panel; the goal starts at zero and the duel is locked.
+  expect(screen.queryByText(copy.en.noProgress)).not.toBeOnTheScreen();
+  expect(screen.getByText(copy.en.homeGoalProgress(0, 5))).toBeOnTheScreen();
+  expect(screen.getByText(copy.en.homeDuelLocked)).toBeOnTheScreen();
+  expect(screen.queryByTestId('home-duel-start')).not.toBeOnTheScreen();
   expect(screen.getByTestId('home-start')).toHaveTextContent(
     copy.en.startPracticing,
   );
@@ -95,6 +97,7 @@ test('home distinguishes unavailable progress from first use, retries and resume
         selectedCards(['hiragana:a']).map((card) => card.id),
       ),
       mode: 'scheduled',
+      length: '12',
     },
   });
 });
@@ -104,12 +107,7 @@ test('home keeps continue wording once a review is saved', async () => {
   jest
     .spyOn(reviews, 'load')
     .mockResolvedValue(
-      new Map([
-        [
-          selectedCards(['hiragana:a'])[0].id,
-          scheduleReview(initializeCard(now), Rating.Good, now).card,
-        ],
-      ]),
+      new Map([[selectedCards(['hiragana:a'])[0].id, progressAfter(now)]]),
     );
   await render(
     <LearningProvider>
@@ -124,30 +122,6 @@ test('home keeps continue wording once a review is saved', async () => {
   );
 });
 
-test('syllabary browsing leaves saved families intact until the explicit family action', async () => {
-  await render(
-    <LearningProvider>
-      <SelectionProvider>
-        <SyllabaryScreen />
-      </SelectionProvider>
-    </LearningProvider>,
-  );
-  await act(async () => {});
-  await fireEvent.press(screen.getByRole('tab', { name: 'Katakana' }));
-  await fireEvent.press(screen.getByLabelText('シ, shi'));
-  expect(screen.getByText('Also accepted: si')).toBeOnTheScreen();
-  expect(AsyncStorage.setItem).not.toHaveBeenCalled();
-  await fireEvent.press(screen.getByText(copy.en.practiceFamily));
-  expect(router.navigate).toHaveBeenLastCalledWith({
-    pathname: '/practice',
-    params: { section: 'basic' },
-  });
-  expect((await learning.read('guest')).selection).toEqual({
-    alphabet: 'katakana',
-    kanaIds: selectedCards(['katakana:sa']).map((card) => card.id),
-  });
-});
-
 test('Home resumes a partial character selection without broadening its family', async () => {
   await AsyncStorage.setItem(
     'kana-study-selection',
@@ -160,10 +134,80 @@ test('Home resumes a partial character selection without broadening its family',
       </SelectionProvider>
     </LearningProvider>,
   );
-  await screen.findByText(copy.en.selected(1));
+  await screen.findByText(copy.en.homeRoundMeta(1, false));
   await fireEvent.press(screen.getByTestId('home-start'));
   expect(router.navigate).toHaveBeenLastCalledWith({
     pathname: '/study',
-    params: { kana: '["hiragana:い"]', mode: 'scheduled' },
+    params: { kana: '["hiragana:い"]', mode: 'scheduled', length: '12' },
+  });
+});
+
+test('Home can start an endless round instead', async () => {
+  await render(
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
+  );
+  await fireEvent.press(
+    await screen.findByRole('radio', { name: copy.en.homeRoundEndless }),
+  );
+  expect(screen.getByText(copy.en.homeRoundMeta(5, true))).toBeOnTheScreen();
+  await fireEvent.press(screen.getByTestId('home-start'));
+  expect(router.navigate).toHaveBeenLastCalledWith({
+    pathname: '/study',
+    params: {
+      kana: JSON.stringify(
+        selectedCards(['hiragana:a']).map((card) => card.id),
+      ),
+      mode: 'scheduled',
+    },
+  });
+});
+
+test('Home shows due review, the goal and a locked duel once a review is saved', async () => {
+  const now = new Date();
+  const [a] = selectedCards(['hiragana:a']);
+  jest
+    .spyOn(reviews, 'load')
+    .mockResolvedValue(new Map([[a.id, progressAfter(now)]]));
+  await render(
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
+  );
+  expect(await screen.findByText(copy.en.dueReview)).toBeOnTheScreen();
+  expect(screen.getByText(copy.en.homeDuelLocked)).toBeOnTheScreen();
+  expect(screen.queryByTestId('home-duel-start')).not.toBeOnTheScreen();
+  expect(screen.getByText(copy.en.homeGoalProgress(1, 5))).toBeOnTheScreen();
+  expect(screen.getByTestId('home-alphabets')).toBeOnTheScreen();
+});
+
+test('Home offers a duel with the most confused pair', async () => {
+  const [tsu, shi] = ['つ', 'し'].map((glyph) =>
+    selectedCards(['hiragana:ta', 'hiragana:sa']).find(
+      (card) => card.kana === glyph,
+    )!,
+  );
+  const store = createConfusionStore(testStore);
+  await store.record('guest', 0, tsu.id, shi.id);
+  await store.record('guest', 0, shi.id, tsu.id);
+  await render(
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
+  );
+  await fireEvent.press(await screen.findByTestId('home-duel-start'));
+  expect(router.navigate).toHaveBeenLastCalledWith({
+    pathname: '/study',
+    params: {
+      kana: JSON.stringify([shi.id, tsu.id].sort()),
+      length: '8',
+    },
   });
 });

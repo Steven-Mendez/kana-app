@@ -1,25 +1,23 @@
-import type { Card } from 'ts-fsrs';
-
 import type { KanaCard } from '@/data/kana';
 import type { Grade } from '@/lib/study';
 
-import { recallProbability } from '@/lib/spaced-repetition';
+import { cappedToday, mastery, type KanaProgress } from '@/lib/kana-mastery';
 
-// FSRS owns memory state; this weight only chooses the next practice prompt.
-export function practiceWeight(card: Card | undefined, now: Date): number {
-  if (!card || card.reps === 0) return 3;
-  return (
-    1 +
-    card.difficulty / 5 +
-    4 * (1 - recallProbability(card, now)) +
-    (card.due <= now ? 1 : 0)
-  );
+// Mastery owns progress; this weight only chooses the next practice prompt.
+export function practiceWeight(
+  progress: KanaProgress | undefined,
+  now: Date,
+): number {
+  if (!progress) return 3;
+  const weight =
+    1 + 3 * (1 - progress.level / mastery.max) + (progress.due <= now ? 1 : 0);
+  return cappedToday(progress, now) ? weight / 2 : weight;
 }
 
 export function nextPracticeCard(
   pool: readonly KanaCard[],
   grades: readonly Grade[] = [],
-  progress?: ReadonlyMap<string, Card>,
+  progress?: ReadonlyMap<string, KanaProgress>,
   now = new Date(),
   random = Math.random,
 ): KanaCard {

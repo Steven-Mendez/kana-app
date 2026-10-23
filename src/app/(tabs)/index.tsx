@@ -1,17 +1,26 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { LegalLinks } from '@/components/legal-links';
-import { Action } from '@/components/action';
+import { Divider } from '@/components/game/layout';
+import { Rise } from '@/components/game/rise';
 import {
-  AlphabetCoverage,
-  DueReview,
-  ProgressNotice,
-} from '@/components/progress-overview';
+  HomeAlphabets,
+  HomeDue,
+  HomeDuel,
+  HomeGoal,
+  HomeRound,
+  HomeSkeleton,
+  HomeStart,
+} from '@/components/home-sections';
+import { ProgressNotice } from '@/components/progress-overview';
 import { Screen } from '@/components/screen';
+import { topConfusion } from '@/lib/confusions';
+import { roundLength } from '@/lib/game-score';
 import { usePreferences } from '@/lib/preferences-provider';
 import { useSelection } from '@/lib/selection-provider';
 import { selectedCards } from '@/lib/study';
+import { useConfusions } from '@/lib/use-confusions';
 import { useStudyProgress } from '@/lib/use-study-progress';
 
 type Copy = ReturnType<typeof usePreferences>['t'];
@@ -25,112 +34,74 @@ function nextStepCopy(t: Copy, selected: number, reviewed?: number) {
 }
 
 export default function HomeScreen() {
-  const { t, preferences } = usePreferences();
+  const { t } = usePreferences();
   const { selection, notice } = useSelection();
   const progress = useStudyProgress();
+  const { confusions } = useConfusions();
+  const [endless, setEndless] = useState(false);
   const selected = selection ? selectedCards(selection.kanaIds) : [];
   const nextStep = nextStepCopy(t, selected.length, progress.data?.reviewed);
+  const start = () =>
+    selected.length
+      ? router.navigate({
+          pathname: '/study',
+          params: {
+            kana: JSON.stringify(selected.map((card) => card.id)),
+            mode: 'scheduled',
+            ...(endless ? {} : { length: String(roundLength) }),
+          },
+        })
+      : router.navigate('/kana');
   return (
-    <Screen navigation>
+    <Screen navigation brand>
       <ScrollView contentContainerClassName="items-center">
-        <View className="w-full max-w-2xl gap-6 px-5 py-6 sm:gap-8 sm:px-6 sm:py-10">
-          <View className="gap-2">
-            <Text
-              accessibilityRole="header"
-              className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl"
-            >
-              {t.welcome}
-            </Text>
-            <Text className="text-base text-muted-foreground">
-              {t.welcomeDetail}
-            </Text>
-          </View>
-          <View className="gap-5 rounded-3xl bg-surface p-6 sm:p-8">
-            <Text className="text-xs font-bold tracking-widest text-primary">
-              {t.yourNextStep}
-            </Text>
-            <Text className="text-2xl font-bold tracking-tight text-foreground">
-              {nextStep.title}
-            </Text>
-            {!selection ? (
-              <Text className="text-base text-muted-foreground">
-                {t.loading}
-              </Text>
-            ) : (
-              <>
-                <Text className="text-4xl leading-normal tracking-widest text-foreground">
-                  {selected.length
-                    ? selected
-                        .slice(0, 5)
-                        .map((card) => card.kana)
-                        .join(' ')
-                    : 'あ い う え お'}
-                </Text>
-                <View className="gap-4 border-t border-border pt-5">
-                  <Text className="text-sm text-muted-foreground">
-                    {selected.length
-                      ? t.selected(selected.length)
-                      : t.startLearningDetail}
-                  </Text>
-                  <Action
-                    primary
-                    label={nextStep.action}
-                    testID="home-start"
-                    onPress={() =>
-                      selected.length
-                        ? router.navigate({
-                            pathname: '/study',
-                            params: {
-                              kana: JSON.stringify(
-                                selected.map((card) => card.id),
-                              ),
-                              mode: 'scheduled',
-                            },
-                          })
-                        : router.navigate('/practice')
-                    }
-                  />
-                  {selected.length ? (
-                    <Action
-                      label={t.changeSelection}
-                      onPress={() => router.navigate('/practice')}
-                    />
-                  ) : null}
-                </View>
-              </>
-            )}
-            {notice ? (
-              <Text accessibilityRole="alert" className="text-sm text-error">
-                {notice}
-              </Text>
-            ) : null}
-          </View>
-          <View className="gap-4">
-            <View className="flex-row flex-wrap items-center justify-between gap-2">
-              <Text
-                accessibilityRole="header"
-                className="text-xl font-semibold text-foreground"
-              >
-                {t.exploreAlphabets}
-              </Text>
-              <Action
-                label={t.viewSyllabary}
-                onPress={() => router.navigate('/syllabary')}
-              />
-            </View>
-            {progress.data ? (
-              <AlphabetCoverage data={progress.data} />
-            ) : (
-              <ProgressNotice
-                status={progress.status}
-                onRetry={progress.refresh}
-              />
-            )}
-          </View>
-          {progress.data ? <DueReview data={progress.data} /> : null}
-          <LegalLinks language={preferences.language} />
+        <View className="w-full max-w-2xl gap-6 px-4 pt-1 pb-8 sm:px-6 sm:py-10">
+          <Text
+            numberOfLines={2}
+            className="font-ui text-[15px] text-muted-foreground"
+          >
+            <Text className="font-ui-bold text-foreground">{t.welcome}</Text>{' '}
+            {t.welcomeDetail}
+          </Text>
+          <Rise>
+            <HomeRound
+              title={nextStep.title}
+              selected={selected}
+              ready={!!selection}
+              endless={endless}
+              onEndless={setEndless}
+              notice={notice || undefined}
+            />
+          </Rise>
+          {progress.data ? (
+            // Sections rise once, in reading order, when progress arrives.
+            <>
+              <Rise index={1} className="gap-6">
+                <HomeGoal today={progress.data.today} />
+                <Divider />
+              </Rise>
+              {progress.data.reviewed ? (
+                <Rise index={2} className="gap-6">
+                  <HomeDue data={progress.data} />
+                  <Divider />
+                </Rise>
+              ) : null}
+              <Rise index={3} className="gap-6">
+                <HomeDuel pair={topConfusion(confusions)} />
+                <Divider />
+              </Rise>
+              <Rise index={4}>
+                <HomeAlphabets data={progress.data} />
+              </Rise>
+            </>
+          ) : progress.status === 'loading' ? (
+            <HomeSkeleton />
+          ) : (
+            <ProgressNotice status="error" onRetry={progress.refresh} />
+          )}
         </View>
       </ScrollView>
+      <HomeStart action={nextStep.action} onStart={start} />
     </Screen>
   );
 }

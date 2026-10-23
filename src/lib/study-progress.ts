@@ -1,9 +1,12 @@
-import { State, type Card } from 'ts-fsrs';
-
 import { alphabets, cards, type KanaCard } from '@/data/kana';
+import { localDay } from '@/lib/learning-domain';
+import { isMastered, type KanaProgress } from '@/lib/kana-mastery';
 
-export function summarizeProgress(saved: ReadonlyMap<string, Card>, now: Date) {
-  const reviewed = cards.filter((kana) => (saved.get(kana.id)?.reps ?? 0) > 0);
+export function summarizeProgress(
+  saved: ReadonlyMap<string, KanaProgress>,
+  now: Date,
+) {
+  const reviewed = cards.filter((kana) => saved.has(kana.id));
   const due = reviewed
     .filter((kana) => saved.get(kana.id)!.due.getTime() <= now.getTime())
     .sort(
@@ -13,25 +16,20 @@ export function summarizeProgress(saved: ReadonlyMap<string, Card>, now: Date) {
     .map((kana) => saved.get(kana.id)!.due)
     .filter((date) => date.getTime() > now.getTime())
     .sort((a, b) => a.getTime() - b.getTime())[0];
+  const mastered = reviewed.filter((kana) => isMastered(saved.get(kana.id)!));
   return {
     reviewed: reviewed.length,
     unseen: cards.length - reviewed.length,
     due,
     next,
-    today: reviewed.filter(
-      (kana) =>
-        saved.get(kana.id)?.last_review?.toDateString() === now.toDateString(),
-    ).length,
-    reviews: reviewed.reduce((sum, kana) => sum + saved.get(kana.id)!.reps, 0),
-    learning: reviewed.filter(
-      (kana) => saved.get(kana.id)!.state === State.Learning,
-    ).length,
-    relearning: reviewed.filter(
-      (kana) => saved.get(kana.id)!.state === State.Relearning,
-    ).length,
-    scheduled: reviewed.filter(
-      (kana) => saved.get(kana.id)!.state === State.Review,
-    ).length,
+    today: reviewed.filter((kana) => saved.get(kana.id)!.day === localDay(now))
+      .length,
+    reviews: reviewed.reduce(
+      (sum, kana) => sum + saved.get(kana.id)!.answers,
+      0,
+    ),
+    learning: reviewed.length - mastered.length,
+    mastered: mastered.length,
     alphabets: alphabets.map((alphabet) => ({
       alphabet,
       total: cards.filter((kana) => kana.alphabet === alphabet).length,

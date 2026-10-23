@@ -3,19 +3,25 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { cards } from '@/data/kana';
+import type { KanaProgress } from '@/lib/kana-mastery';
 import { useLearning } from '@/lib/learning-provider';
 import { summarizeProgress } from '@/lib/study-progress';
 
 type Progress = ReturnType<typeof summarizeProgress>;
 type Snapshot =
-  | { status: 'loading' | 'error'; data: null }
-  | { status: 'ready'; data: Progress };
+  | { status: 'loading' | 'error'; data: null; saved: null }
+  | {
+      status: 'ready';
+      data: Progress;
+      saved: ReadonlyMap<string, KanaProgress>;
+    };
 
 export function useStudyProgress() {
   const { reviews, document } = useLearning();
   const [snapshot, setSnapshot] = useState<Snapshot>({
     status: 'loading',
     data: null,
+    saved: null,
   });
   const active = useRef(false);
   const generation = useRef(0);
@@ -27,11 +33,12 @@ export function useStudyProgress() {
         setSnapshot({
           status: 'ready',
           data: summarizeProgress(saved, new Date()),
+          saved,
         });
       }
     } catch {
       if (active.current && current === generation.current)
-        setSnapshot({ status: 'error', data: null });
+        setSnapshot({ status: 'error', data: null, saved: null });
     }
   }, [reviews]);
   useFocusEffect(
@@ -62,7 +69,7 @@ export function useStudyProgress() {
   return {
     ...snapshot,
     refresh: () => {
-      setSnapshot({ status: 'loading', data: null });
+      setSnapshot({ status: 'loading', data: null, saved: null });
       void load();
     },
   };

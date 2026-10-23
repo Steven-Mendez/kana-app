@@ -2,6 +2,7 @@ import { cards } from '@/data/kana';
 import type { DocumentStore } from '@/lib/document-store';
 import {
   algorithm,
+  legacyAlgorithm,
   mergeEvents,
   replayEvents,
   validatePatch,
@@ -15,8 +16,9 @@ import {
   preferencesKey,
   type Preferences,
 } from '@/lib/preferences-storage';
+import { hydrateProgress } from '@/lib/kana-mastery';
 import {
-  hydrateCard,
+  parseLegacyAnswers,
   parseProgress,
   reviewKey,
   type ReviewRequest,
@@ -100,6 +102,13 @@ function parse(raw: string | null, deviceId: string): LearningDocument {
   doc.selection = parseSelection(JSON.stringify(doc.selection));
   if (mergeEvents(doc.events).length !== doc.events.length)
     throw new Error('Duplicate stored events');
+  // Progress derived by an earlier model (FSRS) is rebuilt from its events.
+  if (
+    Object.values(doc.progress).some(
+      (progress) => (progress as { version: number }).version === 1,
+    )
+  )
+    rebuild(doc);
   const byId = new Map(doc.events.map((event) => [event.id, event]));
   if (
     Object.values(doc.progress).reduce(
@@ -126,7 +135,7 @@ function parse(raw: string | null, deviceId: string): LearningDocument {
   )
     throw new Error('Invalid pending events');
   for (const [id, progress] of Object.entries(doc.progress))
-    parseProgress(JSON.stringify(progress), id);
+    doc.progress[id] = parseProgress(JSON.stringify(progress), id)!;
   for (const op of doc.operations) {
     if (!op.id) throw new Error('Invalid operation');
     validatePatch(op.patch, validIds);
@@ -238,26 +247,26 @@ export function createLearningRepository(
         resetPending !== null
           ? Promise.resolve([])
           : Promise.all(
-              cards.map(async (card) =>
-                parseProgress(
+              cards.map(async (card) => ({
+                cardId: card.id,
+                reviews: parseLegacyAnswers(
                   await legacy.getItem(reviewKey(card.id)),
                   card.id,
                 ),
-              ),
+              })),
             ),
       ]);
       doc.preferences = parsePreferences(preferences);
       doc.selection = parseSelection(selection);
-      doc.events = records.flatMap(
-        (record) =>
-          record?.reviews.map((review) => ({
-            id: `legacy:${id}:${review.id}`,
-            cardId: record.cardId,
-            rating: review.rating,
-            reviewedAt: review.review,
-            deviceId: id,
-            algorithm,
-          })) ?? [],
+      doc.events = records.flatMap((record) =>
+        record.reviews.map((review) => ({
+          id: `legacy:${id}:${review.id}`,
+          cardId: record.cardId,
+          rating: review.rating,
+          reviewedAt: review.review,
+          deviceId: id,
+          algorithm: legacyAlgorithm,
+        })),
       );
       rebuild(doc);
       await db.update('account:guest', (raw) => ({
@@ -273,7 +282,7 @@ export function createLearningRepository(
           return new Map(
             ids.flatMap((id) =>
               doc.progress[id]
-                ? [[id, hydrateCard(doc.progress[id].card)] as const]
+                ? [[id, hydrateProgress(doc.progress[id].mastery)] as const]
                 : [],
             ),
           );
@@ -298,8 +307,8 @@ export function createLearningRepository(
             }
             const previous = doc.progress[event.cardId];
             if (
-              previous?.card.last_review &&
-              previous.card.last_review > event.reviewedAt
+              previous?.mastery.lastAnswer &&
+              previous.mastery.lastAnswer > event.reviewedAt
             )
               throw new Error('Review precedes last review');
             doc.events = mergeEvents(doc.events, [event]);
@@ -372,8 +381,7 @@ export function createLearningRepository(
         parseSelection(JSON.stringify(snapshot.selection));
         if (snapshot.events.some((event) => !validIds.has(event.cardId)))
           throw new Error('Unknown remote kana');
-        for (const [id, progress] of Object.entries(snapshot.progress))
-          parseProgress(JSON.stringify(progress), id);
+        // The server's progress is a cache; local progress is rebuilt below.
         doc.pending = doc.pending.filter(
           (id) => !snapshot.acknowledged.includes(id),
         );

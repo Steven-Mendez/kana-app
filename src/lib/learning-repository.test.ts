@@ -90,9 +90,9 @@ test('a durable review and pending event survive reopening and remain isolated b
     getItem: async () => null,
   });
   expect((await reopened.read('alice')).pending).toEqual(['one']);
-  expect((await reopened.read('alice')).progress[first.cardId].card.reps).toBe(
-    1,
-  );
+  expect(
+    (await reopened.read('alice')).progress[first.cardId].mastery.answers,
+  ).toBe(1);
   expect((await reopened.read('bob')).events).toEqual([]);
   await expect(
     repo.reviews('alice').commit({ ...request, rating: 1 }),
@@ -104,7 +104,7 @@ test('offline events arriving out of order converge, including same-time and new
   expect(replayEvents(first.cardId, [second, first])).toEqual(
     replayEvents(first.cardId, [first, second, first]),
   );
-  expect(replayEvents(first.cardId, [first, second]).card.reps).toBe(2);
+  expect(replayEvents(first.cardId, [first, second]).mastery.answers).toBe(2);
   expect(() => mergeEvents([first, { ...first, rating: 1 }])).toThrow(
     'conflict',
   );
@@ -115,9 +115,12 @@ test('migration retains legacy data, rejects corruption, and can resume', async 
   const { repo, db } = setup(legacy);
   await expect(repo.migrate()).rejects.toThrow();
   expect(await db.read('account:guest')).toBeNull();
-  legacy['kana-srs:v1:hiragana:あ'] = JSON.stringify(
-    replayEvents(first.cardId, [first]),
-  );
+  legacy['kana-srs:v1:hiragana:あ'] = JSON.stringify({
+    version: 1,
+    cardId: first.cardId,
+    card: {},
+    reviews: [{ id: first.id, rating: 3, review: first.reviewedAt }],
+  });
   await repo.migrate();
   await repo.migrate();
   expect((await repo.read('guest')).events).toHaveLength(1);
@@ -199,7 +202,7 @@ test('new writes during a request survive its response and synchronize in the ne
   expect((await repo.read('alice')).operations).toEqual([]);
 });
 
-test('early failures persist and queue exactly once during continuous practice', async () => {
+test('every answer persists and queues exactly once during continuous practice', async () => {
   const { repo } = setup();
   await repo.reviews('alice').commit({
     id: 'initial',
@@ -213,15 +216,14 @@ test('early failures persist and queue exactly once during continuous practice',
     rating: 1 as const,
     reviewedAt: new Date('2026-01-01T00:00:01.000Z'),
   };
-  expect(
-    (await repo.read('alice')).progress[first.cardId].card.due >
-      failure.reviewedAt.toISOString(),
-  ).toBe(true);
   await repo.reviews('alice').commit(failure);
   await repo.reviews('alice').commit(failure);
   const doc = await repo.read('alice');
   expect(doc.pending).toEqual(['initial', 'early-failure']);
-  expect(doc.progress[first.cardId].card.reps).toBe(2);
+  expect(doc.progress[first.cardId].mastery).toMatchObject({
+    answers: 2,
+    level: 0,
+  });
 });
 
 test('migration honors an interrupted legacy reset without resurrecting old reviews', async () => {
@@ -353,4 +355,29 @@ test('explicit guest reset discards corrupt reviews without replacing preference
   await repo.requestReset('guest');
   expect((await repo.read('guest')).progress).toEqual({});
   expect((await repo.read('guest')).preferences.theme).toBe('dark');
+});
+
+test('documents holding FSRS progress are rebuilt as mastery from their events', async () => {
+  const { repo, db } = setup();
+  await repo.reviews('alice').commit({
+    id: first.id,
+    cardId: first.cardId,
+    rating: 3,
+    reviewedAt: new Date(first.reviewedAt),
+  });
+  const raw = JSON.parse((await db.read('account:alice'))!);
+  raw.events[0].algorithm = 'fsrs-5.4.2-r90-v1';
+  raw.progress[first.cardId] = {
+    version: 1,
+    cardId: first.cardId,
+    card: { reps: 1 },
+    reviews: [{ id: first.id, rating: 3, review: first.reviewedAt }],
+  };
+  await db.update('account:alice', () => ({
+    raw: JSON.stringify(raw),
+    result: undefined,
+  }));
+  const doc = await repo.read('alice');
+  expect(doc.progress[first.cardId].version).toBe(2);
+  expect(doc.progress[first.cardId].mastery.level).toBe(5);
 });

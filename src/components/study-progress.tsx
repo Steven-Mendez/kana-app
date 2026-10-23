@@ -16,7 +16,7 @@ export function StudyProgress({
     <Text
       testID="study-summary"
       accessibilityLiveRegion="polite"
-      className="flex-1 text-sm font-medium text-muted-foreground tabular-nums"
+      className="flex-1 font-ui text-[13px] text-muted-foreground tabular-nums"
     >
       {t.answered(answered)} · {t.correctCount(correct)}
       {/* A streak of one is just the last answer; show it once it means something. */}

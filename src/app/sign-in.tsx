@@ -54,7 +54,7 @@ export default function SignInScreen() {
       setCode('');
     });
   return (
-    <Screen navigation>
+    <Screen navigation title={t.title}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
@@ -174,7 +174,7 @@ export default function SignInScreen() {
           <Action
             label={t.guest}
             disabled={busy}
-            onPress={() => router.replace('/practice')}
+            onPress={() => router.replace('/kana')}
           />
           <LegalLinks language={preferences.language} />
         </View>

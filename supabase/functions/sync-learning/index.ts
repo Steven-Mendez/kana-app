@@ -110,9 +110,14 @@ Deno.serve(async (request: Request) => {
       const confirmed = new Set(
         snapshot.events.map((event: LearningEvent) => event.id),
       );
+      const cached = snapshot.progress as Record<string, { version?: number }>;
+      // New answers change progress; a missing or pre-mastery cache row heals.
       const changedIds = new Set(
-        events
-          .filter((event) => !confirmed.has(event.id))
+        combined
+          .filter(
+            (event) =>
+              !confirmed.has(event.id) || cached[event.cardId]?.version !== 2,
+          )
           .map((event) => event.cardId),
       );
       const progress = [...changedIds].map((id) => replayEvents(id, combined));

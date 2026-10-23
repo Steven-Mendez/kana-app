@@ -12,6 +12,7 @@ export function Icon({
     | 'primary'
     | 'primary-foreground'
     | 'muted-foreground'
+    | 'background'
     | 'success'
     | 'error';
   size?: number;

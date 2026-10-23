@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Action } from '@/components/action';
+import { SectionLabel, TextAction } from '@/components/game/layout';
 import { accountCopy, accountError } from '@/lib/account-copy';
 import { isProviderEnabled } from '@/lib/auth-features';
 import { useAuth } from '@/lib/auth-provider';
@@ -18,8 +19,14 @@ export function AccountPanel() {
     useLearning();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const locked = useRef(false);
   const providers = account?.providers ?? [];
+  const pending = Boolean(
+    document.pending.length ||
+    document.operations.length ||
+    document.resetRequestId,
+  );
   async function run(action: () => Promise<void>) {
     if (locked.current) return;
     locked.current = true;
@@ -34,49 +41,39 @@ export function AccountPanel() {
       setBusy(false);
     }
   }
+  const linkApple = isProviderEnabled('apple') && !providers.includes('apple');
+  const linkGoogle =
+    isProviderEnabled('google') && !providers.includes('google');
   return (
-    <View className="gap-4 rounded-2xl border border-border bg-surface p-5">
-      <Text
-        accessibilityRole="header"
-        className="text-lg font-semibold text-foreground"
-      >
-        {account?.email ?? t.title}
-      </Text>
+    <View className="gap-3">
+      <SectionLabel>{t.title}</SectionLabel>
+      {/* The hero already shows the email when the account has no name. */}
+      {account?.name ? (
+        <Text
+          numberOfLines={1}
+          ellipsizeMode="middle"
+          className="font-ui text-[13px] text-muted-foreground"
+        >
+          {account.email}
+        </Text>
+      ) : null}
       <Text
         accessibilityLiveRegion="polite"
-        className="text-sm text-muted-foreground"
+        className="font-ui text-[15px] text-foreground"
       >
         {t[status]}
       </Text>
       {account ? (
         <>
-          <Text className="text-sm text-foreground">
+          <Text className="font-ui text-[13px] text-muted-foreground">
             {t.providers}: {providers.join(', ')}
           </Text>
-          {isProviderEnabled('apple') && !providers.includes('apple') ? (
-            <Action
-              label={t.linkApple}
-              disabled={busy}
-              onPress={() => {
-                void run(() => socialSignIn('apple', true));
-              }}
-            />
-          ) : null}
-          {isProviderEnabled('google') && !providers.includes('google') ? (
-            <Action
-              label={t.linkGoogle}
-              disabled={busy}
-              onPress={() => {
-                void run(() => socialSignIn('google', true));
-              }}
-            />
-          ) : null}
           {importAvailable ? (
-            <View className="gap-3 border-t border-border pt-4">
-              <Text className="text-lg font-semibold text-foreground">
+            <View className="gap-3 pt-2">
+              <Text className="font-ui-bold text-lg text-foreground">
                 {t.importTitle}
               </Text>
-              <Text className="text-sm text-muted-foreground">
+              <Text className="font-ui text-[15px] text-muted-foreground">
                 {t.importDetail}
               </Text>
               <Action
@@ -87,7 +84,7 @@ export function AccountPanel() {
                   void run(() => decideImport(true));
                 }}
               />
-              <Action
+              <TextAction
                 label={t.skip}
                 disabled={busy}
                 onPress={() => {
@@ -98,46 +95,97 @@ export function AccountPanel() {
           ) : null}
           {status === 'attention' ? (
             <>
-              <Text className="text-sm text-muted-foreground">
+              <Text className="font-ui text-[15px] text-muted-foreground">
                 {t.syncDetail}
               </Text>
-              <Action label={t.retry} onPress={retry} disabled={busy} />
               <Action
+                variant="quiet"
+                label={t.retry}
+                onPress={retry}
+                disabled={busy}
+              />
+              <TextAction
                 label={t.signIn}
                 onPress={() => router.push('/sign-in')}
                 disabled={busy}
               />
             </>
           ) : null}
-          {document.pending.length ||
-          document.operations.length ||
-          document.resetRequestId ? (
-            <Text className="text-sm text-muted-foreground">
-              {t.pendingSignOut}
-            </Text>
+          {linkApple || linkGoogle ? (
+            <View className="flex-row flex-wrap gap-x-6">
+              {linkApple ? (
+                <TextAction
+                  label={t.linkApple}
+                  disabled={busy}
+                  onPress={() => {
+                    void run(() => socialSignIn('apple', true));
+                  }}
+                />
+              ) : null}
+              {linkGoogle ? (
+                <TextAction
+                  label={t.linkGoogle}
+                  disabled={busy}
+                  onPress={() => {
+                    void run(() => socialSignIn('google', true));
+                  }}
+                />
+              ) : null}
+            </View>
           ) : null}
-          <Action
-            label={t.signOut}
-            disabled={busy}
-            onPress={() => {
-              void run(signOut);
-            }}
-          />
+          {confirming ? (
+            <View className="gap-3 pt-2">
+              <Text
+                accessibilityRole="alert"
+                className="font-ui text-[15px] text-foreground"
+              >
+                {t.pendingSignOut}
+              </Text>
+              <Action
+                variant="destructive"
+                label={t.signOutAnyway}
+                disabled={busy}
+                onPress={() => {
+                  void run(signOut);
+                }}
+              />
+              <TextAction
+                label={t.cancel}
+                disabled={busy}
+                onPress={() => setConfirming(false)}
+              />
+            </View>
+          ) : (
+            <TextAction
+              tone="muted"
+              label={t.signOut}
+              disabled={busy}
+              onPress={() => {
+                // Unsynced changes stay on this device, so ask before leaving.
+                if (pending) setConfirming(true);
+                else void run(signOut);
+              }}
+            />
+          )}
         </>
       ) : (
-        <Action
-          primary
-          label={t.signIn}
-          onPress={() => router.push('/sign-in')}
-        />
+        <>
+          <Text className="font-ui text-[15px] text-muted-foreground">
+            {t.description}
+          </Text>
+          <Action
+            primary
+            label={t.signIn}
+            onPress={() => router.push('/sign-in')}
+          />
+        </>
       )}
-      {busy ? (
-        <Text accessibilityRole="progressbar" className="text-foreground">
-          {t.busy}
-        </Text>
-      ) : null}
       {message ? (
-        <Text accessibilityRole="alert" selectable className="text-error">
+        <Text
+          accessibilityRole="alert"
+          selectable
+          className="font-ui text-[13px] text-error"
+        >
           {message}
         </Text>
       ) : null}

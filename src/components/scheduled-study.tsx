@@ -1,40 +1,52 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Card } from 'ts-fsrs';
-import { hydrateCard, type ReviewRequest } from '@/lib/review-storage';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Action } from '@/components/action';
+import { Skeleton } from '@/components/game/layout';
 import { Screen } from '@/components/screen';
 import { StudySession } from '@/components/study-session';
 import type { KanaCard } from '@/data/kana';
+import { dailyStreak } from '@/lib/game-streak';
+import type { InputMode } from '@/lib/input-mode';
 import { usePreferences } from '@/lib/preferences-provider';
+import {
+  hydrateProgress,
+  reviewQueue,
+  type KanaProgress,
+} from '@/lib/kana-mastery';
 import { useLearning } from '@/lib/learning-provider';
-import { reviewQueue, shouldSchedulePractice } from '@/lib/spaced-repetition';
+import type { ReviewRequest } from '@/lib/review-storage';
 
 export function ScheduledStudy({
   cards,
   dueOnly = false,
+  length,
+  inputMode,
+  confusedWith,
+  onConfusion,
 }: {
   cards: KanaCard[];
   dueOnly?: boolean;
+  length?: number;
+  inputMode?: InputMode;
+  confusedWith?: (cardId: string) => string[];
+  onConfusion?: (cardId: string, confusedId: string) => void;
 }) {
   const { t, preferences } = usePreferences();
-  const { reviews } = useLearning();
-  const progressRef = useRef(new Map<string, Card>());
+  const { reviews, document } = useLearning();
+  // The streak as it stood when the round began, to celebrate extending it.
+  const [streakBefore] = useState(() => dailyStreak(document.events));
+  const streakNow = useMemo(
+    () => dailyStreak(document.events),
+    [document.events],
+  );
+  const progressRef = useRef(new Map<string, KanaProgress>());
+  // Every answer is saved; the daily allowance keeps drilling from inflating mastery.
   const commit = useCallback(
     async (request: ReviewRequest) => {
-      if (
-        !shouldSchedulePractice(
-          progressRef.current.get(request.cardId),
-          request.rating,
-          request.reviewedAt,
-        )
-      ) {
-        return { practiceOnly: true as const };
-      }
       const saved = await reviews.commit(request);
-      progressRef.current.set(request.cardId, hydrateCard(saved.card));
+      progressRef.current.set(request.cardId, hydrateProgress(saved.mastery));
       return saved;
     },
     [reviews],
@@ -46,7 +58,7 @@ export function ScheduledStudy({
         status: 'ready';
         cards: KanaCard[];
         nextDue: Date | null;
-        progress: Map<string, Card>;
+        progress: Map<string, KanaProgress>;
       }
   >({ status: 'loading' });
 
@@ -60,13 +72,7 @@ export function ScheduledStudy({
             status: 'ready',
             progress,
             ...(dueOnly
-              ? reviewQueue(
-                  cards.filter(
-                    (card) => (progress.get(card.id)?.reps ?? 0) > 0,
-                  ),
-                  progress,
-                  new Date(),
-                )
+              ? reviewQueue(cards, progress, new Date())
               : { cards, nextDue: null }),
           });
         }
@@ -86,7 +92,38 @@ export function ScheduledStudy({
         cards={state.cards}
         progress={state.progress}
         onCommitReview={commit}
+        length={length}
+        inputMode={inputMode}
+        confusedWith={confusedWith}
+        onConfusion={onConfusion}
+        streak={{ before: streakBefore, after: streakNow }}
       />
+    );
+
+  // Loading keeps the round's shape: header, card and answer area.
+  if (state.status === 'loading')
+    return (
+      <Screen>
+        <View
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel={t.loading}
+          className="flex-1 items-center"
+        >
+          <View className="w-full max-w-lg gap-4 px-4 pt-3 sm:px-6">
+            <Skeleton className="h-4 w-full rounded-full" />
+            <Skeleton className="h-4 w-40" />
+          </View>
+          <View className="flex-1 items-center pt-8">
+            <View testID="study-skeleton-card">
+              <Skeleton className="h-[236px] w-[196px] rounded-card" />
+            </View>
+          </View>
+          <View className="w-full max-w-lg px-4 pb-4 sm:px-6">
+            <Skeleton className="h-14 w-full rounded-2xl" />
+          </View>
+        </View>
+      </Screen>
     );
 
   return (
@@ -99,39 +136,27 @@ export function ScheduledStudy({
           {t.scheduledReview}
         </Text>
         <Text
-          accessibilityRole={
-            state.status === 'error'
-              ? 'alert'
-              : state.status === 'loading'
-                ? 'progressbar'
-                : undefined
-          }
+          accessibilityRole={state.status === 'error' ? 'alert' : undefined}
           className="text-center text-base text-foreground"
         >
-          {state.status === 'loading'
-            ? t.loading
-            : state.status === 'error'
-              ? t.reviewLoadError
-              : t.nothingDue}
+          {state.status === 'error' ? t.reviewLoadError : t.nothingDue}
         </Text>
         {state.status === 'ready' && state.nextDue ? (
-          <Text className="text-center text-sm text-muted-foreground">
+          <Text className="text-center text-[13px] text-muted-foreground">
             {t.nextReview(state.nextDue.toLocaleString(preferences.language))}
           </Text>
         ) : null}
-        {state.status !== 'loading' ? (
-          <Action
-            primary
-            label={state.status === 'error' ? t.retry : t.refreshReviews}
-            onPress={() => {
-              setState({ status: 'loading' });
-              setAttempt((value) => value + 1);
-            }}
-          />
-        ) : null}
+        <Action
+          primary
+          label={state.status === 'error' ? t.retry : t.refreshReviews}
+          onPress={() => {
+            setState({ status: 'loading' });
+            setAttempt((value) => value + 1);
+          }}
+        />
         <Action
           label={t.changeSelection}
-          onPress={() => router.dismissTo('/practice')}
+          onPress={() => router.dismissTo('/kana')}
         />
       </View>
     </Screen>

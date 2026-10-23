@@ -13,14 +13,13 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
-import { AccountLinks } from '@/components/account-links';
-import { Brand } from '@/components/brand';
 import { SelectionProvider } from '@/lib/selection-provider';
 import {
   PreferencesProvider,
   usePreferences,
 } from '@/lib/preferences-provider';
 import { supabase } from '@/lib/supabase';
+import { useGameFonts } from '@/lib/game-fonts';
 import { AuthProvider } from '@/lib/auth-provider';
 import { LearningProvider } from '@/lib/learning-provider';
 
@@ -44,6 +43,7 @@ export default function RootLayout() {
 function AppLayout() {
   const { preferences, t } = usePreferences();
   const pathname = usePathname();
+  const fontsReady = useGameFonts();
   const [background, foreground, primary, border] = useCSSVariable([
     '--color-background',
     '--color-foreground',
@@ -85,6 +85,10 @@ function AppLayout() {
     };
   }, []);
 
+  // Bundled fonts register within a few frames; rendering before that would
+  // flash system fonts in every game component.
+  if (!fontsReady) return null;
+
   return (
     <SelectionProvider>
       <ThemeProvider value={theme}>
@@ -93,45 +97,14 @@ function AppLayout() {
             name="(tabs)"
             options={{
               title:
-                pathname === '/syllabary'
-                  ? t.syllabary
-                  : pathname === '/progress'
-                    ? t.progress
-                    : pathname === '/practice'
-                      ? t.practice
-                      : 'Kana',
-              headerRight: () => <AccountLinks />,
-              headerTitle: pathname === '/' ? () => <Brand /> : undefined,
-              headerShown: process.env.EXPO_OS !== 'web',
-              headerShadowVisible: false,
-              headerStyle: { backgroundColor: theme.colors.background },
-              headerTintColor: theme.colors.text,
+                pathname === '/kana'
+                  ? t.kana
+                  : pathname === '/profile'
+                    ? t.profile
+                    : 'Kana',
             }}
           />
-          <Stack.Screen
-            name="profile"
-            options={{
-              title: t.profile,
-              headerBackButtonDisplayMode: 'minimal',
-              headerTransparent: false,
-              headerStyle: { backgroundColor: theme.colors.background },
-              headerTintColor: theme.colors.text,
-              headerShown: process.env.EXPO_OS !== 'web',
-              headerShadowVisible: false,
-            }}
-          />
-          <Stack.Screen
-            name="settings"
-            options={{
-              title: t.settings,
-              headerBackButtonDisplayMode: 'minimal',
-              headerTransparent: false,
-              headerStyle: { backgroundColor: theme.colors.background },
-              headerTintColor: theme.colors.text,
-              headerShown: process.env.EXPO_OS !== 'web',
-              headerShadowVisible: false,
-            }}
-          />
+          <Stack.Screen name="settings" options={{ title: t.settings }} />
           <Stack.Screen name="sign-in" options={{ title: t.signIn }} />
           <Stack.Screen name="auth/callback" options={{ title: t.signIn }} />
           <Stack.Screen
