@@ -27,6 +27,9 @@ const es = {
   practiceFamily: 'Practicar esta familia',
   acceptedReadings: 'También se acepta',
   readingLabel: 'LECTURA EN RŌMAJI',
+  strokeOrder: (count: number) =>
+    `Orden de trazos: ${count} trazo${count === 1 ? '' : 's'}`,
+  replayStrokes: 'Repetir trazos',
   progressDetail: 'Un poco de constancia, cada vez más kana.',
   progressEyebrow: 'TU RECORRIDO',
   reviewedKana: 'Kana estudiados',
@@ -194,6 +197,9 @@ const en: typeof es = {
   practiceFamily: 'Practice this family',
   acceptedReadings: 'Also accepted',
   readingLabel: 'RŌMAJI READING',
+  strokeOrder: (count) =>
+    `Stroke order: ${count} stroke${count === 1 ? '' : 's'}`,
+  replayStrokes: 'Replay strokes',
   progressDetail: 'A little consistency. A few more kana.',
   progressEyebrow: 'YOUR JOURNEY',
   reviewedKana: 'Kana studied',

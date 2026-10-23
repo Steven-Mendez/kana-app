@@ -40,6 +40,10 @@ jest.mock('expo-router', () => ({
       .useEffect(callback, [callback]),
 }));
 jest.mock('@/components/icon', () => ({ Icon: () => null }));
+jest.mock('uniwind', () => ({
+  useCSSVariable: (names: string | string[]) =>
+    Array.isArray(names) ? names.map(() => '#806a67') : '#806a67',
+}));
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual(
     '@react-native-async-storage/async-storage/jest/async-storage-mock',

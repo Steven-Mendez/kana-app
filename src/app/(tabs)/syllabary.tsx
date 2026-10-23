@@ -4,6 +4,8 @@ import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 
 import { CatalogGrid } from '@/components/catalog-grid';
 import { KanaCell } from '@/components/kana-cell';
+import { KanaStrokes } from '@/components/kana-strokes';
+import { strokeGlyphs } from '@/lib/kana-strokes';
 import { Action } from '@/components/action';
 import { CatalogContent, CatalogControls } from '@/components/catalog-controls';
 import { Screen } from '@/components/screen';
@@ -91,7 +93,14 @@ export default function SyllabaryScreen() {
             accessibilityLiveRegion="polite"
             className="flex-row items-center gap-4"
           >
-            <Text className="text-4xl text-primary">{card.kana}</Text>
+            {strokeGlyphs(card.kana) ? (
+              <KanaStrokes
+                kana={card.kana}
+                size={([...card.kana].length > 1 ? 64 : 96) * fontScale}
+              />
+            ) : (
+              <Text className="text-4xl text-primary">{card.kana}</Text>
+            )}
             <View className="flex-1 gap-1">
               <Text className="text-xs font-semibold tracking-wider text-muted-foreground">
                 {t.readingLabel}
