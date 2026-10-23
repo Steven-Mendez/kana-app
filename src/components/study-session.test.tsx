@@ -15,6 +15,7 @@ import { cards } from '@/data/kana';
 import { copy } from '@/lib/copy';
 import { createReviewStorage, type ReviewRequest } from '@/lib/review-storage';
 import { reviews } from '@/lib/reviews';
+import { answerHaptic } from '@/lib/haptics';
 import { initializeCard, scheduleReview } from '@/lib/spaced-repetition';
 
 jest.mock('expo-crypto', () => ({
@@ -45,6 +46,7 @@ jest.mock('@/lib/learning-provider', () => ({
 jest.mock('@/lib/reviews', () => ({
   reviews: { load: jest.fn(), commit: jest.fn() },
 }));
+jest.mock('@/lib/haptics', () => ({ answerHaptic: jest.fn() }));
 
 const now = new Date('2026-03-08T06:55:00.000Z');
 const t = copy.en;
@@ -551,6 +553,21 @@ test('the header summarizes answers and shows the streak from two in a row', asy
   expect(screen.getByTestId('study-summary')).toHaveTextContent(
     `${t.answered(2)} · ${t.correctCount(2)} · ${t.streakCount(2)}`,
   );
+});
+
+test('each new grade triggers exactly one matching haptic', async () => {
+  const haptic = jest.mocked(answerHaptic);
+  haptic.mockClear();
+  await render(<StudySession cards={deck} />);
+  const input = screen.getByTestId('romaji-input');
+  await fireEvent.changeText(input, 'a');
+  await fireEvent.changeText(input, 'a');
+  expect(haptic.mock.calls).toEqual([[true]]);
+  await advanceFeedback();
+  await fireEvent.changeText(input, 'wrong');
+  await enter();
+  await fireEvent.press(screen.getByRole('button', { name: t.next }));
+  expect(haptic.mock.calls).toEqual([[true], [false]]);
 });
 
 test('finishing excludes an unfinished draft and does not commit it', async () => {

@@ -35,6 +35,7 @@ import {
   studyReducer,
   type StudyAction,
 } from '@/lib/study';
+import { answerHaptic } from '@/lib/haptics';
 import { usePreferences } from '@/lib/preferences-provider';
 import type { ReviewRequest, StoredProgress } from '@/lib/review-storage';
 import { ratingForAnswer } from '@/lib/spaced-repetition';
@@ -209,6 +210,7 @@ export function StudySession({
       input.current?.focus();
       const result = next.grades[round.index];
       if (!result || previousGrade) return;
+      answerHaptic(result.correct);
       feedbackUntil.current = Date.now() + 250;
       if (!onCommitReview) return;
       const reviewedAt = new Date();
