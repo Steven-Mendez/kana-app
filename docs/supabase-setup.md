@@ -81,7 +81,7 @@ Los fallos de sincronización se registran sin tokens, códigos, payloads ni dat
 - Exportación web y bundles JavaScript de iOS/Android generados; Edge Function comprobada con Deno. Generar bundles no equivale a probar SQLite ni OAuth en un dispositivo.
 - Prueba visual del export web con Supabase local: envío de código a Mailpit, verificación, perfil sincronizado, restauración al recargar y cierre de sesión.
 
-Los tres cambios OpenSpec permanecen activos con sus tareas de implementación marcadas y sus pruebas de lanzamiento pendientes. Archivarlos cuando se complete la verificación externa correspondiente. La sincronización utiliza el historial completo; el límite de escalabilidad descrito arriba sigue vigente.
+Quedan pendientes estas pruebas de lanzamiento en builds de desarrollo: Google nativo (y Apple y la vinculación de proveedores antes de activarlos); durabilidad de SQLite al cerrar y reabrir la app en iOS y Android; y la matriz de aceptación de dos dispositivos (sin conexión, reconexión y cambio de cuenta) contra staging. La sincronización utiliza el historial completo; el límite de escalabilidad descrito arriba sigue vigente.
 
 En desarrollo con SDK 58, los módulos de entorno del cliente pueden dar prioridad a `.env.local` aunque existan variables en el proceso. Confirmar el backend efectivo antes de probar autenticación. La comprobación visual de esta entrega utilizó un export de producción con valores explícitos del Supabase local, preservando el archivo de entorno existente del proyecto.
 
@@ -125,4 +125,4 @@ Para rotar la credencial de Google: generar el nuevo secreto en el cliente de Go
 
 Commit de aplicación `0ff5e03`, desplegado por Vercel en `https://kana-app-eight.vercel.app`. Acceso Google completado con la cuenta del propietario; callback PKCE vuelve a `/profile` y muestra «Sincronizado». La recarga de Perfil conserva la sesión. HTTP 200 para inicio, práctica, perfil, ajustes, callback, privacidad y condiciones; HTTP 404 para una ruta desconocida. El HTML de privacidad y condiciones contiene los textos completos antes de ejecutar JavaScript.
 
-Comprobaciones finales: 101 pruebas en 17 suites; `pnpm check`; Expo Doctor 20/20; export web de 17 rutas; OpenSpec estricto. Las verificaciones de dispositivos nativos y la matriz manual de dos dispositivos permanecen pendientes, explícitas en los tres cambios de implementación. Se publica la web; no se han enviado builds a App Store ni Google Play.
+Comprobaciones finales: 101 pruebas en 17 suites; `pnpm check`; Expo Doctor 20/20; export web de 17 rutas. Las verificaciones de dispositivos nativos y la matriz manual de dos dispositivos permanecen pendientes (ver «Verificación realizada en esta entrega»). Se publica la web; no se han enviado builds a App Store ni Google Play.
