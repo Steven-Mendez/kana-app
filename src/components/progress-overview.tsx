@@ -8,16 +8,23 @@ import { dueStudyParams, type summarizeProgress } from '@/lib/study-progress';
 
 type Progress = ReturnType<typeof summarizeProgress>;
 
+const tones = {
+  primary: 'bg-primary',
+  success: 'bg-success',
+  // Unseen kana are neutral; a full red bar would read as an alert.
+  neutral: 'bg-muted-foreground/40',
+};
+
 export function ProgressBar({
   value,
   total,
   label,
-  green = false,
+  tone = 'primary',
 }: {
   value: number;
   total: number;
   label: string;
-  green?: boolean;
+  tone?: keyof typeof tones;
 }) {
   return (
     <View
@@ -27,7 +34,7 @@ export function ProgressBar({
       className="h-2 overflow-hidden rounded-full bg-muted"
     >
       <View
-        className={`h-full rounded-full ${green ? 'bg-success' : 'bg-primary'}`}
+        className={`h-full rounded-full ${tones[tone]}`}
         style={{
           width: `${total ? Math.min(100, (value / total) * 100) : 0}%`,
         }}
@@ -47,9 +54,7 @@ export function AlphabetCoverage({ data }: { data: Progress }) {
         >
           <View className="flex-row items-center gap-3">
             <View className="h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-              <Text
-                className={`text-2xl ${index ? 'text-success' : 'text-primary'}`}
-              >
+              <Text className="text-2xl text-primary">
                 {index ? 'ア' : 'あ'}
               </Text>
             </View>
@@ -61,9 +66,7 @@ export function AlphabetCoverage({ data }: { data: Progress }) {
                 {t.coverage(reviewed, total)}
               </Text>
             </View>
-            <Text
-              className={`text-xl font-semibold ${index ? 'text-success' : 'text-primary'}`}
-            >
+            <Text className="text-xl font-semibold text-primary">
               {Math.round((reviewed / total) * 100)}%
             </Text>
           </View>
@@ -71,7 +74,6 @@ export function AlphabetCoverage({ data }: { data: Progress }) {
             value={reviewed}
             total={total}
             label={alphabetLabels[alphabet]}
-            green={index === 1}
           />
         </View>
       ))}

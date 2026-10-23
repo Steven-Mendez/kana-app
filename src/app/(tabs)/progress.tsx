@@ -86,7 +86,13 @@ export default function ProgressScreen() {
                         value={data[stage]}
                         total={cards.length}
                         label={t[stage]}
-                        green={stage === 'scheduled'}
+                        tone={
+                          stage === 'unseen'
+                            ? 'neutral'
+                            : stage === 'scheduled'
+                              ? 'success'
+                              : 'primary'
+                        }
                       />
                     </View>
                   ))}

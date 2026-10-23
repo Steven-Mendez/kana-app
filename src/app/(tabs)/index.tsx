@@ -14,11 +14,22 @@ import { useSelection } from '@/lib/selection-provider';
 import { selectedCards } from '@/lib/study';
 import { useStudyProgress } from '@/lib/use-study-progress';
 
+type Copy = ReturnType<typeof usePreferences>['t'];
+
+// Until progress loads, keep the returning wording rather than flash first use.
+function nextStepCopy(t: Copy, selected: number, reviewed?: number) {
+  if (!selected) return { title: t.startLearning, action: t.configurePractice };
+  if (reviewed === 0)
+    return { title: t.startLearning, action: t.startPracticing };
+  return { title: t.continueLearning, action: t.resumeStudy };
+}
+
 export default function HomeScreen() {
   const { t, preferences } = usePreferences();
   const { selection, notice } = useSelection();
   const progress = useStudyProgress();
   const selected = selection ? selectedCards(selection.kanaIds) : [];
+  const nextStep = nextStepCopy(t, selected.length, progress.data?.reviewed);
   return (
     <Screen navigation>
       <ScrollView contentContainerClassName="items-center">
@@ -39,7 +50,7 @@ export default function HomeScreen() {
               {t.yourNextStep}
             </Text>
             <Text className="text-2xl font-bold tracking-tight text-foreground">
-              {selected.length ? t.continueLearning : t.startLearning}
+              {nextStep.title}
             </Text>
             {!selection ? (
               <Text className="text-base text-muted-foreground">
@@ -63,9 +74,7 @@ export default function HomeScreen() {
                   </Text>
                   <Action
                     primary
-                    label={
-                      selected.length ? t.resumeStudy : t.configurePractice
-                    }
+                    label={nextStep.action}
                     testID="home-start"
                     onPress={() =>
                       selected.length

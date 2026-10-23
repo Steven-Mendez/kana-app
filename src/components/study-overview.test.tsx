@@ -12,6 +12,8 @@ import { SelectionProvider } from '@/lib/selection-provider';
 import { reviews } from '@/lib/reviews';
 import { selectedCards } from '@/lib/study';
 import { copy } from '@/lib/copy';
+import { initializeCard, scheduleReview } from '@/lib/spaced-repetition';
+import { Rating } from 'ts-fsrs';
 
 jest.mock('@/lib/auth-provider', () => ({
   useAuth: () => ({ session: null }),
@@ -76,6 +78,11 @@ test('home distinguishes unavailable progress from first use, retries and resume
   expect(screen.queryByText(copy.en.noProgress)).not.toBeOnTheScreen();
   await fireEvent.press(screen.getByText(copy.en.retry));
   expect(await screen.findByText(copy.en.noProgress)).toBeOnTheScreen();
+  expect(screen.getByText(copy.en.startLearning)).toBeOnTheScreen();
+  expect(screen.getByTestId('home-start')).toHaveTextContent(
+    copy.en.startPracticing,
+  );
+  expect(screen.queryByText(copy.en.continueLearning)).not.toBeOnTheScreen();
   await fireEvent.press(screen.getByTestId('home-start'));
   expect(router.navigate).toHaveBeenLastCalledWith({
     pathname: '/study',
@@ -86,6 +93,31 @@ test('home distinguishes unavailable progress from first use, retries and resume
       mode: 'scheduled',
     },
   });
+});
+
+test('home keeps continue wording once a review is saved', async () => {
+  const now = new Date();
+  jest
+    .spyOn(reviews, 'load')
+    .mockResolvedValue(
+      new Map([
+        [
+          selectedCards(['hiragana:a'])[0].id,
+          scheduleReview(initializeCard(now), Rating.Good, now).card,
+        ],
+      ]),
+    );
+  await render(
+    <LearningProvider>
+      <SelectionProvider>
+        <HomeScreen />
+      </SelectionProvider>
+    </LearningProvider>,
+  );
+  expect(await screen.findByText(copy.en.continueLearning)).toBeOnTheScreen();
+  expect(screen.getByTestId('home-start')).toHaveTextContent(
+    copy.en.resumeStudy,
+  );
 });
 
 test('syllabary browsing leaves saved families intact until the explicit family action', async () => {
