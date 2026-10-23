@@ -20,7 +20,7 @@ type Copy = ReturnType<typeof usePreferences>['t'];
 function nextStepCopy(t: Copy, selected: number, reviewed?: number) {
   if (!selected) return { title: t.startLearning, action: t.configurePractice };
   if (reviewed === 0)
-    return { title: t.startLearning, action: t.startPracticing };
+    return { title: t.firstPractice, action: t.startPracticing };
   return { title: t.continueLearning, action: t.resumeStudy };
 }
 

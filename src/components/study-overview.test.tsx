@@ -82,7 +82,7 @@ test('home distinguishes unavailable progress from first use, retries and resume
   expect(screen.queryByText(copy.en.noProgress)).not.toBeOnTheScreen();
   await fireEvent.press(screen.getByText(copy.en.retry));
   expect(await screen.findByText(copy.en.noProgress)).toBeOnTheScreen();
-  expect(screen.getByText(copy.en.startLearning)).toBeOnTheScreen();
+  expect(screen.getByText(copy.en.firstPractice)).toBeOnTheScreen();
   expect(screen.getByTestId('home-start')).toHaveTextContent(
     copy.en.startPracticing,
   );
